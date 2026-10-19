@@ -4,9 +4,9 @@ const db = require('../db');
 const view = name => path.join(__dirname, '..', 'views', 'student', name + '.html');
 
 // ----- pages -----
-exports.dashboardPage = (req, res) => res.sendFile(view('dashboard'));
-exports.equipmentPage = (req, res) => res.sendFile(view('equipment'));
-exports.requestsPage  = (req, res) => res.sendFile(view('requests'));
+exports.homePage = (req, res) => res.sendFile(view('home'));
+exports.rental_catalog_Page = (req, res) => res.sendFile(view('rental_catalog'));
+exports.my_rental_Page = (req, res) => res.sendFile(view('my_rental'));
 
 // ----- data -----
 exports.getEquipment = async (req, res) => {

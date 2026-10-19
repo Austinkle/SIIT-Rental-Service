@@ -1,0 +1,17 @@
+<link rel="stylesheet" href="/style.css">
+<body data-role="student">
+<nav id="nav"></nav>
+
+<h1>Student page</h1>
+<h2>My borrow requests</h2>
+<table id="requests" border="1"></table>
+
+<script src="/nav.js"></script>
+<script src="/shared.js"></script>
+<script>
+  loadTable('/student/api/requests', 'requests', [
+    { key: 'equipment',    label: 'Equipment' },
+    { key: 'request_date', label: 'Requested on' },
+    { key: 'status',       label: 'Status' }
+  ]);
+</script>
