@@ -5,7 +5,7 @@ const menus = {
     { label: 'My Rental', href: '/student/my_rental' }
   ],
   staff: [
-    { label: 'Home', href: '/staff' }
+    { label: 'Requests', href: '/staff/requests' }
   ],
   admin: [
     { label: 'Home', href: '/admin' }
