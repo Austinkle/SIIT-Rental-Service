@@ -4,9 +4,9 @@
   "description": "",
   "main": "db.js",
   "scripts": {
-  "start": "node server.js",
-  "dev": "nodemon server.js"
-},
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -20,5 +20,13 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Austinkle/SIIT-Rental-Service.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Austinkle/SIIT-Rental-Service/issues"
+  },
+  "homepage": "https://github.com/Austinkle/SIIT-Rental-Service#readme"
 }

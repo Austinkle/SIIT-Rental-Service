@@ -1,11 +1,11 @@
 const menus = {
   student: [
-    { label: 'Home',        href: '/student' },
-    { label: 'Equipment',   href: '/student/equipment' },
-    { label: 'My Requests', href: '/student/requests' }
+    { label: 'Home',        href: '/student/home' },
+    { label: 'Rental Catalog', href: '/student/rental_catalog' },
+    { label: 'My Rental', href: '/student/my_rental' }
   ],
   staff: [
-    { label: 'Home', href: '/staff' }
+    { label: 'Requests', href: '/staff/requests' }
   ],
   admin: [
     { label: 'Home', href: '/admin' }

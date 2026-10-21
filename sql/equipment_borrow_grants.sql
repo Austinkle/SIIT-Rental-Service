@@ -9,8 +9,14 @@ GRANT SELECT ON equipment_borrow.* TO 'equip_app'@'localhost';
 GRANT INSERT, UPDATE ON equipment_borrow.borrow_request     TO 'equip_app'@'localhost';
 GRANT INSERT, UPDATE ON equipment_borrow.borrow_transaction TO 'equip_app'@'localhost';
 GRANT INSERT, UPDATE ON equipment_borrow.penalty            TO 'equip_app'@'localhost';
-GRANT INSERT, UPDATE, DELETE ON equipment_borrow.equipment  TO 'equip_app'@'localhost';
 GRANT INSERT, UPDATE, DELETE ON equipment_borrow.category   TO 'equip_app'@'localhost';
+
+-- Equipment: add/delete only through the procedures; direct UPDATE only on normal columns
+GRANT UPDATE (name, category_id, description, total_quantity, available_quantity,
+              condition_note, status)
+      ON equipment_borrow.equipment TO 'equip_app'@'localhost';
+GRANT EXECUTE ON PROCEDURE equipment_borrow.sp_add_equipment    TO 'equip_app'@'localhost';
+GRANT EXECUTE ON PROCEDURE equipment_borrow.sp_delete_equipment TO 'equip_app'@'localhost';
 
 -- Users: direct UPDATE only on two columns; create/delete only through the procedures
 GRANT UPDATE (password_hash, phone) ON equipment_borrow.`user` TO 'equip_app'@'localhost';
@@ -18,9 +24,6 @@ GRANT EXECUTE ON PROCEDURE equipment_borrow.sp_create_student TO 'equip_app'@'lo
 GRANT EXECUTE ON PROCEDURE equipment_borrow.sp_create_staff   TO 'equip_app'@'localhost';
 GRANT EXECUTE ON PROCEDURE equipment_borrow.sp_create_admin   TO 'equip_app'@'localhost';
 GRANT EXECUTE ON PROCEDURE equipment_borrow.sp_delete_user    TO 'equip_app'@'localhost';
-
--- Example of taking a permission away (optional):
--- REVOKE DELETE ON equipment_borrow.category FROM 'equip_app'@'localhost';
 
 -- Check what the account can do:
 -- SHOW GRANTS FOR 'equip_app'@'localhost';

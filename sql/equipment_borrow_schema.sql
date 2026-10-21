@@ -9,13 +9,13 @@ USE equipment_borrow;
 -- user = supertype: only the columns every person has.
 -- The role of a user IS its subclass (user_type); there is no separate role table.
 CREATE TABLE `user` (
-    `user_id`    INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `first_name` VARCHAR(50) NOT NULL,
-    `last_name`  VARCHAR(50) NOT NULL,
-    `email`      VARCHAR(100) NOT NULL,
+    `user_id`       INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `first_name`    VARCHAR(50) NOT NULL,
+    `last_name`     VARCHAR(50) NOT NULL,
+    `email`         VARCHAR(100) NOT NULL,
     `password_hash` VARCHAR(255) NOT NULL,
-    `phone`      VARCHAR(20) NULL,
-    `user_type`  VARCHAR(10) NOT NULL,
+    `phone`         VARCHAR(20) NULL,
+    `user_type`     VARCHAR(10) NOT NULL,
     UNIQUE KEY `user_email_unique` (`email`),
     UNIQUE KEY `user_id_type_unique` (`user_id`, `user_type`),
     CONSTRAINT `chk_user_type` CHECK (`user_type` IN ('student', 'staff', 'admin'))
@@ -74,11 +74,29 @@ CREATE TABLE `equipment` (
     `available_quantity` INT NOT NULL DEFAULT 1,
     `condition_note`     VARCHAR(100) NULL,
     `status` ENUM('active', 'retired', 'maintenance') NOT NULL DEFAULT 'active',
+    -- ER relationship "add":    staff 1 : N equipment  (equipment.added_by)
+    -- ER relationship "delete": staff 1 : N equipment  (soft delete: deleted_by + deleted_at)
+    -- A row is never physically deleted, otherwise the "delete" relationship would be lost.
+    `added_by`   INT NULL,
+    `deleted_by` INT NULL,
+    `deleted_at` DATETIME NULL,
     CONSTRAINT `equipment_category_id_foreign`
         FOREIGN KEY (`category_id`) REFERENCES `category`(`category_id`),
+    CONSTRAINT `equipment_added_by_foreign`
+        FOREIGN KEY (`added_by`) REFERENCES `staff`(`user_id`),
+    CONSTRAINT `equipment_deleted_by_foreign`
+        FOREIGN KEY (`deleted_by`) REFERENCES `staff`(`user_id`),
     CONSTRAINT `chk_equipment_qty`
-        CHECK (`available_quantity` >= 0 AND `available_quantity` <= `total_quantity`)
+        CHECK (`available_quantity` >= 0 AND `available_quantity` <= `total_quantity`),
+    CONSTRAINT `chk_equipment_deleted`
+        CHECK ((`deleted_by` IS NULL AND `deleted_at` IS NULL)
+               OR (`deleted_by` IS NOT NULL AND `deleted_at` IS NOT NULL AND `status` = 'retired'))
 ) ENGINE=InnoDB;
+
+-- Total participation (double lines in the Chen ER) is already enforced by NOT NULL + FK:
+--   borrow_request.user_id (submit), borrow_transaction.borrower_id (borrows),
+--   borrow_transaction.approved_by (approve), penalty.user_id (owes),
+--   penalty.transaction_id (incurs)
 
 -- ---------- Borrowing ----------
 CREATE TABLE `borrow_request` (
@@ -87,11 +105,14 @@ CREATE TABLE `borrow_request` (
     `equipment_id` INT NOT NULL,
     `request_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `status` ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+    `handled_by`   INT NULL,        -- NEW: the staff member who accepted or rejected
+    `handled_at`   DATETIME NULL,   -- NEW: when they did it
     CONSTRAINT `borrow_request_user_id_foreign`
         FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`),
     CONSTRAINT `borrow_request_equipment_id_foreign`
-        FOREIGN KEY (`equipment_id`) REFERENCES `equipment`(`equipment_id`)
-    -- FIX 2: removed the reversed FK (borrow_request.request_id -> borrow_transaction.request_id)
+        FOREIGN KEY (`equipment_id`) REFERENCES `equipment`(`equipment_id`),
+    CONSTRAINT `borrow_request_handled_by_foreign`
+        FOREIGN KEY (`handled_by`) REFERENCES `staff`(`user_id`)
 ) ENGINE=InnoDB;
 
 CREATE TABLE `borrow_transaction` (
