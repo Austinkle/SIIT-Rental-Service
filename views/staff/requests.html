@@ -4,15 +4,62 @@
 
 <h1>Staff page</h1>
 <h2>Pending requests</h2>
+<p id="message"></p>
 <table id="pending" border="1"></table>
 
 <script src="/nav.js"></script>
-<script src="/shared.js"></script>
 <script>
-  loadTable('/staff/api/pending-requests', 'pending', [
-    { key: 'student',      label: 'Student' },
-    { key: 'equipment',    label: 'Equipment' },
-    { key: 'request_date', label: 'Requested on' },
-    { key: 'request_id', label: 'Request_id' },
-  ]);
+const table = document.getElementById('pending');
+const message = document.getElementById('message');
+
+async function load() {
+  const res = await fetch('/staff/api/pending-requests');
+  table.innerHTML = '';
+  if (!res.ok) { message.textContent = 'Could not load requests'; return; }
+
+  const rows = await res.json();
+  message.textContent = rows.length === 0 ? 'No pending requests' : '';
+  if (rows.length === 0) return;
+
+  const head = table.createTHead().insertRow();
+  ['Student', 'Equipment', 'Requested on', ''].forEach(t => {
+    const th = document.createElement('th');
+    th.textContent = t;
+    head.appendChild(th);
+  });
+
+  const body = table.createTBody();
+  rows.forEach(r => {
+    const tr = body.insertRow();
+    tr.insertCell().textContent = r.student;
+    tr.insertCell().textContent = r.equipment;
+    tr.insertCell().textContent = new Date(r.request_date).toLocaleString();
+
+    const actions = tr.insertCell();
+    actions.appendChild(makeButton('Accept', () => decide(r.request_id, 'approve')));
+    actions.appendChild(makeButton('Reject', () => decide(r.request_id, 'reject')));
+  });
+}
+
+function makeButton(label, onClick) {
+  const btn = document.createElement('button');
+  btn.textContent = label;
+  btn.addEventListener('click', onClick);
+  return btn;
+}
+
+async function decide(id, action) {
+  const res = await fetch('/staff/api/requests/' + id + '/decision', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action })
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    alert(data.error || 'Something went wrong');
+  }
+  load();   // refresh the list either way
+}
+
+load();
 </script>

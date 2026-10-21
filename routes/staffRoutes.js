@@ -10,5 +10,6 @@ router.get('/', ctrl.requestsPage);
 router.get('/requests', ctrl.requestsPage);
 
 router.get('/api/pending-requests', wrap(ctrl.getPending));
+router.post('/api/requests/:id/decision', requireRole('staff'), wrap(ctrl.decideRequest));
 
 module.exports = router;

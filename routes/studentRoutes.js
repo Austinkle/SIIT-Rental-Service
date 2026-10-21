@@ -18,5 +18,6 @@ router.get('/my_rental',  ctrl.my_rental_Page);
 router.get('/api/equipment',  wrap(ctrl.getEquipment));
 router.get('/api/requests',   wrap(ctrl.getMyRequests));
 router.post('/api/requests',  wrap(ctrl.createRequest));
+router.get('/api/categories', wrap(ctrl.getCategories));
 
 module.exports = router;
