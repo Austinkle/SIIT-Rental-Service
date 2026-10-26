@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Create account · SIIT Rental Service</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/login.css">
+</head>
+<body class="login-body">
+  <div class="login-split">
+
+    <aside class="login-aside">
+      <div class="brand font-display">
+        <span class="brand-dot"></span>
+        SIIT RENTAL SERVICE
+      </div>
+      <div>
+        <h2 class="hero-title font-display">
+          Borrow it.<br>
+          <span class="accent">Use it.</span><br>
+          Bring it back.
+        </h2>
+        <p class="aside-copy">
+          Calculators, chargers, adapters and umbrellas from the library counters at Rangsit and Bangkadi.
+        </p>
+      </div>
+      <div class="aside-foot font-display">RANGSIT · BANGKADI</div>
+    </aside>
+
+    <main class="login-main">
+      <form class="login-form" id="signupForm">
+        <div class="eyebrow font-display">SIGN UP</div>
+        <h1 class="form-title font-display">Create account</h1>
+        <p class="form-sub">Student accounts only. Staff accounts are created by an admin.</p>
+
+        <div class="row">
+          <div class="field">
+            <label for="first_name">First name</label>
+            <input id="first_name" name="first_name" type="text" maxlength="50" autocomplete="given-name" required>
+          </div>
+          <div class="field">
+            <label for="last_name">Last name</label>
+            <input id="last_name" name="last_name" type="text" maxlength="50" autocomplete="family-name" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="student_id">Student ID</label>
+          <input id="student_id" name="student_id" type="text" inputmode="numeric"
+                 pattern="\d{6,15}" title="6 to 15 digits" required>
+        </div>
+
+        <div class="field">
+          <label for="email">University email</label>
+          <input id="email" name="email" type="email" maxlength="100" autocomplete="email"
+                 placeholder="name@g.siit.tu.ac.th" required>
+        </div>
+
+        <div class="field">
+          <label for="password">Password (at least 8 characters)</label>
+          <input id="password" name="password" type="password" minlength="8" maxlength="72"
+                 autocomplete="new-password" required>
+        </div>
+
+        <div class="field">
+          <label for="confirm_password">Confirm password</label>
+          <input id="confirm_password" name="confirm_password" type="password" minlength="8" maxlength="72"
+                 autocomplete="new-password" required>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="major">Major (optional)</label>
+            <input id="major" name="major" type="text" maxlength="50">
+          </div>
+          <div class="field">
+            <label for="year">Year (optional)</label>
+            <input id="year" name="year" type="number" min="1" max="8">
+          </div>
+        </div>
+
+        <div id="error" class="error" role="alert" hidden></div>
+
+        <button type="submit" id="submitBtn" class="submit">Create account</button>
+        <a class="secondary" href="/login.html">I already have an account</a>
+      </form>
+    </main>
+
+  </div>
+
+  <script>
+    const form = document.getElementById('signupForm');
+    const errorBox = document.getElementById('error');
+    const btn = document.getElementById('submitBtn');
+
+    function showError(msg) {
+      errorBox.textContent = msg;   // textContent, so the message can never inject HTML
+      errorBox.hidden = false;
+    }
+
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      errorBox.hidden = true;
+
+      const data = Object.fromEntries(new FormData(form));   // { first_name: '...', email: '...', ... }
+      if (data.password !== data.confirm_password) {
+        showError('Passwords do not match');
+        return;
+      }
+      delete data.confirm_password;   // the server does not need it
+
+      btn.disabled = true;
+      btn.textContent = 'Creating account…';
+
+      try {
+        const res = await fetch('/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const result = await res.json().catch(() => ({}));
+
+        if (res.ok) {
+          location.href = '/login.html?registered=1';
+          return;
+        }
+        showError(result.error || 'Could not create account. Please try again.');
+      } catch {
+        showError('Network error. Please try again.');
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Create account';
+    });
+  </script>
+</body>
+</html>
