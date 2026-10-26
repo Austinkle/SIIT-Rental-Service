@@ -54,11 +54,12 @@
             <button type="button" id="togglePw" class="pw-toggle">Show</button>
           </div>
         </div>
-
+        <div id="registered" class="success" role="status" hidden>Account created. You can sign in now.</div>
         <!-- แสดงเมื่อ server redirect กลับมาพร้อม ?error=1 -->
         <div id="error" class="error" role="alert" hidden>Wrong email or password</div>
 
         <button type="submit" id="submitBtn" class="submit">Sign in</button>
+        <a class="secondary" href="/signup.html">Create a student account</a>
 
         <p class="note">Restricted to verified Thammasat University (SIIT) students and staff.</p>
       </form>
@@ -79,6 +80,10 @@
     // แสดง error ถ้า server ส่ง ?error=1 กลับมา
     if (new URLSearchParams(location.search).has('error')) {
       document.getElementById('error').hidden = false;
+    }
+
+    if (new URLSearchParams(location.search).has('registered')) {
+      document.getElementById('registered').hidden = false;
     }
 
     // กันกดซ้ำตอนกำลังส่งฟอร์ม
