@@ -1,11 +1,92 @@
-<h1 style="text-align: center;">SIIT Rental Service</h1>
-<form method="POST" action="/login" style="text-align: center;">
-  <h4 style="text-align: center;">UNIVERSITY EMAIL</h4>
-  <input name="email" type="email" placeholder="name@g.siit.tu.ac.th" required >
-  <br>
-  <h4 style="text-align: center;">PASSWORD</h4>
-  <input name="password" type="password" placeholder="Enter your password" required>
-  <br>
-  <br>
-  <button type="submit">Sign in</button>
-</form>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sign in · SIIT Rental Service</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/login.css">
+</head>
+<body class="login-body">
+  <div class="login-split">
+
+    <!-- ซ้าย: แผงสีเข้ม -->
+    <aside class="login-aside">
+      <div class="brand font-display">
+        <span class="brand-dot"></span>
+        SIIT RENTAL SERVICE
+      </div>
+
+      <div>
+        <h2 class="hero-title font-display">
+          Borrow it.<br>
+          <span class="accent">Use it.</span><br>
+          Bring it back.
+        </h2>
+        <p class="aside-copy">
+          Calculators, chargers, adapters and umbrellas from the library counters at Rangsit and Bangkadi.
+        </p>
+      </div>
+
+      <div class="aside-foot font-display">RANGSIT · BANGKADI</div>
+    </aside>
+
+    <!-- ขวา: ฟอร์ม login (ส่งไปที่ POST /login ของ server.js) -->
+    <main class="login-main">
+      <form class="login-form" method="POST" action="/login">
+        <div class="eyebrow font-display">SIGN IN</div>
+        <h1 class="form-title font-display">Welcome back</h1>
+        <p class="form-sub">Use your Thammasat University account to borrow equipment.</p>
+
+        <div class="field">
+          <label for="email">University email</label>
+          <input id="email" name="email" type="email" autocomplete="email"
+                 placeholder="name@g.siit.tu.ac.th" required>
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="pw-wrap">
+            <input id="password" name="password" type="password"
+                   autocomplete="current-password" placeholder="Enter your password" required>
+            <button type="button" id="togglePw" class="pw-toggle">Show</button>
+          </div>
+        </div>
+
+        <!-- แสดงเมื่อ server redirect กลับมาพร้อม ?error=1 -->
+        <div id="error" class="error" role="alert" hidden>Wrong email or password</div>
+
+        <button type="submit" id="submitBtn" class="submit">Sign in</button>
+
+        <p class="note">Restricted to verified Thammasat University (SIIT) students and staff.</p>
+      </form>
+    </main>
+
+  </div>
+
+  <script>
+    // แสดง/ซ่อนรหัสผ่าน
+    const pw = document.getElementById('password');
+    const toggle = document.getElementById('togglePw');
+    toggle.addEventListener('click', () => {
+      const show = pw.type === 'password';
+      pw.type = show ? 'text' : 'password';
+      toggle.textContent = show ? 'Hide' : 'Show';
+    });
+
+    // แสดง error ถ้า server ส่ง ?error=1 กลับมา
+    if (new URLSearchParams(location.search).has('error')) {
+      document.getElementById('error').hidden = false;
+    }
+
+    // กันกดซ้ำตอนกำลังส่งฟอร์ม
+    document.querySelector('form').addEventListener('submit', () => {
+      const btn = document.getElementById('submitBtn');
+      btn.textContent = 'Signing in…';
+      btn.disabled = true;
+    });
+  </script>
+</body>
+</html>
