@@ -1,5 +1,3 @@
--- Equipment borrowing system (fixed version)
--- Target: MySQL 8.0.16+ (CHECK constraints are enforced from this version)
 
 CREATE DATABASE IF NOT EXISTS equipment_borrow
     CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
