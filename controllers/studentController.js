@@ -42,12 +42,22 @@ exports.getEquipment = async (req, res) => {
 exports.createRequest = async (req, res) => {
   const equipmentId = Number(req.body.equipment_id);
   if (!Number.isInteger(equipmentId)) return res.status(400).json({ error: 'Invalid equipment' });
-  // user id comes from the session, never from the browser
-  await db.query('INSERT INTO borrow_request (user_id, equipment_id) VALUES (?, ?)',
-    [req.session.user.id, equipmentId]);
-  res.json({ ok: true });
-};
 
+  const [dup] = await db.query(
+    "SELECT 1 FROM borrow_request WHERE user_id = ? AND equipment_id = ? AND status = 'pending'",
+    [req.session.user.id, equipmentId]);
+  if (dup.length) return res.status(409).json({ error: 'You already have a pending request for this item' });
+
+  try {
+    await db.query('INSERT INTO borrow_request (user_id, equipment_id) VALUES (?, ?)',
+      [req.session.user.id, equipmentId]);
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.sqlState === '45000') return res.status(400).json({ error: err.sqlMessage });
+    if (err.code === 'ER_NO_REFERENCED_ROW_2') return res.status(404).json({ error: 'Equipment not found' });
+    throw err;
+  }
+};
 exports.getCategories = async (req, res) => {
   const [rows] = await db.query(
     'SELECT category_id, category_name FROM category ORDER BY category_name');
