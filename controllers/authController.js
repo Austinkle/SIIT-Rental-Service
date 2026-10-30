@@ -22,8 +22,8 @@ exports.signup = async (req, res) => {
 
   if (!firstName || firstName.length > 50 || !lastName || lastName.length > 50)
     return fail('Enter your first and last name (max 50 characters each)');
-  if (!/^\d{6,15}$/.test(studentId))
-    return fail('Student ID must be 6-15 digits');
+  if (!/^\d{10}$/.test(studentId))
+    return fail('Student ID must be 10 digits');
   if (email.length > 100 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return fail('Enter a valid email address');
   if (ALLOWED_EMAIL_DOMAIN && !email.endsWith(ALLOWED_EMAIL_DOMAIN))
@@ -36,8 +36,8 @@ exports.signup = async (req, res) => {
     return fail('Password cannot be the same as your email');
   if (major.length > 50)
     return fail('Major is too long');
-  if (year !== null && !(Number.isInteger(year) && year >= 1 && year <= 8))
-    return fail('Year must be a number from 1 to 8');
+  if (year !== null && !(Number.isInteger(year) && year >= 1 && year <= 4))
+    return fail('Year must be a number from 1 to 4');
 
   // ---- hash, then save through the stored procedure ----
   const hash = await bcrypt.hash(password, BCRYPT_COST);
