@@ -22,7 +22,7 @@ async function load() {
   if (rows.length === 0) return;
 
   const head = table.createTHead().insertRow();
-  ['Student', 'Equipment', 'Requested on', ''].forEach(t => {
+  ['Student', 'Equipment', 'Requested on', 'Location','Borrow Date', 'Due Date', ''].forEach(t => {
     const th = document.createElement('th');
     th.textContent = t;
     head.appendChild(th);
@@ -34,6 +34,9 @@ async function load() {
     tr.insertCell().textContent = r.student;
     tr.insertCell().textContent = r.equipment;
     tr.insertCell().textContent = new Date(r.request_date).toLocaleString();
+    tr.insertCell().textContent = r.location;
+    tr.insertCell().textContent = new Date(r.borrow_date).toLocaleDateString();
+    tr.insertCell().textContent = new Date(r.due_date).toLocaleDateString();
 
     const actions = tr.insertCell();
     actions.appendChild(makeButton('Accept', () => decide(r.request_id, 'approve')));

@@ -2,35 +2,144 @@
 <body data-role="student">
 <nav id="nav"></nav>
 
-<h1>Equipment</h1>
+<p style="line-height: 1.6;">---LIBRARY COUNTER - RANGSIT & BANGKADI</p>
+<h2>RENTAL CATALOG</h2>
+<p style="line-height: 1.6;">SIIT equipment available to borrow, free with your student ID.</p>
+<div id="categories"></div><br>
+<p id="message"></p>
+<form id="searchForm">
+  <input id="search" type="search" placeholder="Search by equipment or category name" size="40">
+  <button type="submit">Search</button>
+</form>
+<div id="location"></div>
+<p id="message"></p>
+<div id="active"></div>
+<p id="message"></p>
 <table id="equip" border="1"></table>
 
 <script src="/nav.js"></script>
+<script src="/request-dialog.js"></script>
 <script>
+const searchBox = document.getElementById('search');
+const table = document.getElementById('equip');
+const message = document.getElementById('message');
+
+let selectedCategory = null;   // null = all categories
+let latestCall = 0;
+let selectedLocation = null;
+
+// ----- category buttons -----
+async function loadCategories() {
+  const res = await fetch('/student/api/categories');
+  if (!res.ok) return;
+  const cats = await res.json();
+
+  const box = document.getElementById('categories');
+  box.innerHTML = '';
+  addCategoryButton(box, 'All', null);
+  cats.forEach(c => addCategoryButton(box, c.category_name, c.category_id));
+}
+
+function addCategoryButton(box, label, id) {
+  const btn = document.createElement('button');
+  btn.textContent = label;
+  btn.className = 'cat-btn' + (id === selectedCategory ? ' active' : '');
+
+  btn.addEventListener('click', () => {
+    selectedCategory = id;                                  // remember which category
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');                            // highlight this one
+    load();                                                 // reload the list
+  });
+
+  box.appendChild(btn);
+}
+// ----- location buttons -----
+async function loadLocation() {
+  const res = await fetch('/student/api/location');
+  if (!res.ok) return;
+  const locs = await res.json();
+
+  const box = document.getElementById('location');
+  box.innerHTML = '';
+  addLocationButton(box, 'Both Campuses', null);
+  locs.forEach(l => addLocationButton(box, l.location, l.location));
+}
+
+function addLocationButton(box, label, val) {
+  const btn = document.createElement('button');
+  btn.textContent = label;
+  btn.className = 'loc-btn' + (val == selectedLocation ? ' active' : '');
+
+  btn.addEventListener('click', () => {
+    selectedLocation = val;                                  // remember which category
+    document.querySelectorAll('.loc-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');                            // highlight this one
+    load();                                                 // reload the list
+  });
+
+  box.appendChild(btn);
+}
+
+// ----- equipment list -----
 async function load() {
-  const res = await fetch('/student/api/equipment');
-  const rows = await res.json();
-  const table = document.getElementById('equip');
+  const thisCall = ++latestCall;
+
+  let url = '/student/api/equipment?q=' + encodeURIComponent(searchBox.value);
+  if (selectedCategory !== null) url += '&category=' + selectedCategory;
+  if (selectedLocation != null) url += '&location=' + encodeURIComponent(selectedLocation);
+  const res = await fetch(url);
+  if (thisCall !== latestCall) return;
+
   table.innerHTML = '';
+  if (!res.ok) { message.textContent = 'Could not load equipment'; return; }
+
+  const rows = await res.json();
+  message.textContent = rows.length === 0 ? 'No equipment found' : '';
+  if (rows.length === 0) return;
+
+  const head = table.createTHead().insertRow();
+  ['Name', 'Category', 'Id', 'Status','Location','Description',''].forEach(t => {
+    const th = document.createElement('th');
+    th.textContent = t;
+    head.appendChild(th);
+  });
+
+  const body = table.createTBody();
   rows.forEach(r => {
-    const tr = table.insertRow();
+    const tr = body.insertRow();
     tr.insertCell().textContent = r.name;
-    tr.insertCell().textContent = r.available_quantity;
-    const btn = document.createElement('button');
-    btn.textContent = 'Request';
-    btn.onclick = () => requestItem(r.equipment_id);
-    tr.insertCell().appendChild(btn);
+    tr.insertCell().textContent = r.category_name;
+    tr.insertCell().textContent = r.equipment_id;
+    if(r.br_t_status == 'borrowed'){
+      tr.insertCell().textContent = r.br_t_status;
+    }
+    else if(r.status == 'active'){
+      tr.insertCell().textContent = r.status;
+    }
+    tr.insertCell().textContent = r.location;
+    tr.insertCell().textContent = r.description;
+    if(r.br_t_status == 'borrowed'){
+      tr.insertCell().textContent = 'Unavailable';
+    }
+    else if(r.status === 'active'){
+      const btn = document.createElement('button');
+      btn.textContent = 'Request Rental';
+      btn.addEventListener('click', () => openRequestDialog(r));
+      tr.insertCell().appendChild(btn);
+    }
   });
 }
 
-async function requestItem(id) {
-  const res = await fetch('/student/api/requests', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ equipment_id: id })
-  });
-  alert(res.ok ? 'Request sent' : 'Could not send request');
-}
+// ----- search form -----
+document.getElementById('searchForm').addEventListener('submit', event => {
+  event.preventDefault();
+  load();
+});
 
+// ----- start -----
 load();
+loadCategories();
+loadLocation();
+
 </script>

@@ -17,6 +17,7 @@
 <table id="equip" border="1"></table>
 
 <script src="/nav.js"></script>
+<script src="/request-dialog.js"></script>
 <script>
 const searchBox = document.getElementById('search');
 const table = document.getElementById('equip');
@@ -70,7 +71,7 @@ async function load() {
   if (rows.length === 0) return;
 
   const head = table.createTHead().insertRow();
-  ['Name', 'Category', 'Available', 'Status',''].forEach(t => {
+  ['Name', 'Category', 'Id', 'Status','Location','Description',''].forEach(t => {
     const th = document.createElement('th');
     th.textContent = t;
     head.appendChild(th);
@@ -81,24 +82,25 @@ async function load() {
     const tr = body.insertRow();
     tr.insertCell().textContent = r.name;
     tr.insertCell().textContent = r.category_name;
-    tr.insertCell().textContent = r.available_quantity;
-    tr.insertCell().textContent = r.status;
-    if(r.available_quantity != 0){
+    tr.insertCell().textContent = r.equipment_id;
+    if(r.br_t_status == 'borrowed'){
+      tr.insertCell().textContent = r.br_t_status;
+    }
+    else if(r.status == 'active'){
+      tr.insertCell().textContent = r.status;
+    }
+    tr.insertCell().textContent = r.location;
+    tr.insertCell().textContent = r.description;
+    if(r.br_t_status == 'borrowed'){
+      tr.insertCell().textContent = 'Unavailable';
+    }
+    else if(r.status === 'active'){
       const btn = document.createElement('button');
-    btn.textContent = 'Request Rental';
-    btn.addEventListener('click', () => requestItem(r.equipment_id));
-    tr.insertCell().appendChild(btn);
+      btn.textContent = 'Request Rental';
+      btn.addEventListener('click', () => openRequestDialog(r));
+      tr.insertCell().appendChild(btn);
     }
   });
-}
-
-async function requestItem(id) {
-  const res = await fetch('/student/api/requests', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ equipment_id: id })
-  });
-  alert(res.ok ? 'Request sent' : 'Could not send request');
 }
 
 // ----- search form -----

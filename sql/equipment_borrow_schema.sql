@@ -78,6 +78,7 @@ CREATE TABLE `equipment` (
     `added_by`   INT NULL,
     `deleted_by` INT NULL,
     `deleted_at` DATETIME NULL,
+    `location` ENUM('Rangsit','Bangkadi') NOT NULL,
     CONSTRAINT `equipment_category_id_foreign`
         FOREIGN KEY (`category_id`) REFERENCES `category`(`category_id`),
     CONSTRAINT `equipment_added_by_foreign`
@@ -105,6 +106,9 @@ CREATE TABLE `borrow_request` (
     `status` ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
     `handled_by`   INT NULL,        -- NEW: the staff member who accepted or rejected
     `handled_at`   DATETIME NULL,   -- NEW: when they did it
+    `borrow_date`         DATETIME NOT NULL,
+    `due_date`            DATETIME NOT NULL,
+    `location` ENUM('Rangsit','Bangkadi') NOT NULL,
     CONSTRAINT `borrow_request_user_id_foreign`
         FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`),
     CONSTRAINT `borrow_request_equipment_id_foreign`
@@ -127,6 +131,9 @@ CREATE TABLE `borrow_transaction` (
     `status` ENUM('borrowed', 'returned', 'overdue', 'damaged', 'lost')
         NOT NULL DEFAULT 'borrowed',
     UNIQUE KEY `borrow_transaction_request_id_unique` (`request_id`),
+    `location` ENUM('Rangsit','Bangkadi') NOT NULL,
+    `close_order`         BIT DEFAULT 0 NOT NULL,
+    `flag_damage`         BIT DEFAULT 0 NOT NULL,
     -- FIX 2: correct direction: transaction -> request (1 request : 0..1 transaction)
     CONSTRAINT `borrow_transaction_request_id_foreign`
         FOREIGN KEY (`request_id`) REFERENCES `borrow_request`(`request_id`),

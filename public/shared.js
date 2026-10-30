@@ -1,8 +1,12 @@
 async function loadTable(url, tableId, columns) {
-  const table = document.getElementById(tableId);
+  const table = document.getElementById(tableId);   // check that this id exists in your HTML
+  table.innerHTML = '';
+
   const res = await fetch(url);
-  if (!res.ok) { table.textContent = 'Could not load data'; return; }
+  if (!res.ok) { table.createCaption().textContent = 'Could not load data'; return; }
+
   const rows = await res.json();
+  if (rows.length === 0) { table.createCaption().textContent = 'No data'; return; }
 
   const head = table.createTHead().insertRow();
   columns.forEach(c => {
@@ -13,7 +17,11 @@ async function loadTable(url, tableId, columns) {
 
   const body = table.createTBody();
   rows.forEach(r => {
-    const tr = body.insertRow();
-    columns.forEach(c => { tr.insertCell().textContent = r[c.key]; });
+  const tr = body.insertRow();
+  columns.forEach(c => {
+    const cell = tr.insertCell();
+    if (c.render) cell.appendChild(c.render(r));        // custom content, e.g. a button
+    else cell.textContent = c.format ? c.format(r[c.key]) : r[c.key];
   });
+});
 }
