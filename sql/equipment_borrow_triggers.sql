@@ -92,7 +92,6 @@ BEGIN
     END IF;
 END//
 
--- same two rules when borrower_id / approved_by are changed later
 DROP TRIGGER IF EXISTS trg_borrow_transaction_bu//
 
 CREATE TRIGGER trg_borrow_transaction_bu BEFORE UPDATE ON `borrow_transaction` FOR EACH ROW
@@ -107,18 +106,62 @@ BEGIN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Only staff can approve a borrow';
     END IF;
 
-    -- NEW: a finished rental cannot go back to borrowed/overdue
-    IF OLD.status IN ('returned', 'damaged', 'lost')
-       AND NEW.status IN ('borrowed', 'overdue') THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'This rental is already closed';
+    -- a closed order is final
+    IF OLD.close_order = 1
+       AND (NEW.close_order = 0 OR NEW.flag_damage <> OLD.flag_damage OR NEW.status <> OLD.status) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'This order is already closed';
     END IF;
 
-    -- NEW: returning an item
+    -- a finished rental cannot go back to borrowed/overdue
+    IF OLD.status IN ('returned', 'damaged', 'lost') AND NEW.status IN ('borrowed', 'overdue') THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'This rental is already returned';
+    END IF;
+
+    -- 1) the student returns the item
     IF OLD.status IN ('borrowed', 'overdue') AND NEW.status = 'returned' THEN
         IF NOW() < OLD.borrow_date THEN
             SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'This rental has not started yet';
         END IF;
+        IF NEW.condition_at_return IS NULL OR TRIM(NEW.condition_at_return) = '' THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Condition at return is required';
+        END IF;
         SET NEW.return_date = NOW();
+    END IF;
+
+    -- 2) staff flag damage
+    IF OLD.flag_damage = 1 AND NEW.flag_damage = 0 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'The damage flag cannot be removed';
+    END IF;
+    IF OLD.flag_damage = 0 AND NEW.flag_damage = 1 THEN
+        IF NEW.status <> 'returned' OR NEW.close_order = 1 THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Only a returned, open order can be flagged';
+        END IF;
+        IF NEW.checked_by IS NULL
+           OR NOT EXISTS (SELECT 1 FROM `staff` WHERE user_id = NEW.checked_by) THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Only staff can flag damage';
+        END IF;
+        IF NEW.damage_amount IS NULL OR NEW.damage_amount <= 0 THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Enter a penalty amount greater than 0';
+        END IF;
+        IF NEW.damage_reason IS NULL OR TRIM(NEW.damage_reason) = '' THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Enter a reason for the damage';
+        END IF;
+    END IF;
+
+    -- 3) staff close the order
+    IF OLD.close_order = 0 AND NEW.close_order = 1 THEN
+        IF NEW.status <> 'returned' THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Only a returned item can be closed';
+        END IF;
+        IF NEW.checked_by IS NULL
+           OR NOT EXISTS (SELECT 1 FROM `staff` WHERE user_id = NEW.checked_by) THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Only staff can close an order';
+        END IF;
+        IF NEW.flag_damage = 1
+           AND EXISTS (SELECT 1 FROM `penalty`
+                        WHERE transaction_id = NEW.transaction_id AND paid_status = 'unpaid') THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'The penalty must be paid before closing the order';
+        END IF;
     END IF;
 END//
 
@@ -126,7 +169,14 @@ DROP TRIGGER IF EXISTS trg_borrow_transaction_au//
 
 CREATE TRIGGER trg_borrow_transaction_au AFTER UPDATE ON `borrow_transaction` FOR EACH ROW
 BEGIN
-    IF OLD.status IN ('borrowed', 'overdue') AND NEW.status = 'returned' THEN
+    -- staff flagged damage: create the penalty for this order and this person
+    IF OLD.flag_damage = 0 AND NEW.flag_damage = 1 THEN
+        INSERT INTO `penalty` (user_id, transaction_id, penalty_type, reason, amount)
+        VALUES (NEW.borrower_id, NEW.transaction_id, 'damaged', NEW.damage_reason, NEW.damage_amount);
+    END IF;
+
+    -- staff closed the order: the item is back on the shelf
+    IF OLD.close_order = 0 AND NEW.close_order = 1 THEN
         UPDATE `equipment`
            SET available_quantity = available_quantity + 1
          WHERE equipment_id = NEW.equipment_id;

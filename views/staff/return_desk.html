@@ -1,0 +1,150 @@
+<link rel="stylesheet" href="/style.css">
+<body data-role="staff">
+<nav id="nav"></nav>
+
+<h1>Return Desk</h1>
+<p>Returned items waiting for a check.</p>
+<table id="desk" border="1"></table>
+
+<!-- Flag damage pop-up -->
+<dialog id="flagDialog">
+  <form id="flagForm">
+    <h3>Flag damage</h3>
+    <p><strong id="flagItem"></strong></p>
+    <label>Penalty amount (THB)
+      <input type="number" id="flagAmount" min="0.01" max="100000" step="0.01" required>
+    </label>
+    <label>Reason
+      <input type="text" id="flagReason" maxlength="100" required>
+    </label>
+    <p id="flagError" class="dlg-error" role="alert" hidden></p>
+    <div class="dlg-actions">
+      <button type="button" id="flagCancel">Cancel</button>
+      <button type="submit" id="flagConfirm">Flag damage</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="/nav.js"></script>
+<script src="/shared.js"></script>
+<script>
+  const showDate = v => new Date(v).toLocaleDateString();
+  const showDateTime = v => new Date(v).toLocaleString();
+
+  function makeButton(label, onClick) {
+    const btn = document.createElement('button');
+    btn.textContent = label;
+    btn.addEventListener('click', onClick);
+    return btn;
+  }
+
+  // POST helper: shows the server's error message, then refreshes the list
+  async function post(url, body) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {})
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) alert(data.error || 'Something went wrong');
+    loadDesk();
+    return { ok: res.ok, error: data.error };
+  }
+
+  // ----- table cells -----
+  function returnedCell(r) {
+    const late = new Date(r.return_date) > new Date(r.due_date);
+    return document.createTextNode(showDateTime(r.return_date) + (late ? ' (late)' : ''));
+  }
+
+  function penaltyCell(r) {
+    return document.createTextNode(
+      r.flag_damage ? r.amount + ' THB (' + r.paid_status + ')' : '-');
+  }
+
+  // the buttons depend on the state of the order
+  function actionsCell(r) {
+    const box = document.createElement('span');
+    const closeBtn = makeButton('Accept and close order', () => {
+      if (confirm('Close this order? The item goes back on the shelf.')) {
+        post('/staff/api/return-desk/' + r.transaction_id + '/close');
+      }
+    });
+
+    if (!r.flag_damage) {                                    // nothing flagged yet
+      box.appendChild(closeBtn);
+      box.appendChild(makeButton('Flag damage', () => openFlagDialog(r)));
+    } else if (r.paid_status === 'unpaid') {                 // flagged, waiting for payment
+      box.appendChild(makeButton('Mark penalty paid', () => {
+        if (confirm('Confirm that ' + r.amount + ' THB was received?')) {
+          post('/staff/api/penalties/' + r.penalty_id + '/paid');
+        }
+      }));
+    } else {                                                 // flagged and paid
+      box.appendChild(closeBtn);
+    }
+    return box;
+  }
+
+  function loadDesk() {
+    loadTable('/staff/api/return-desk', 'desk', [
+      { key: 'equipment',           label: 'Equipment' },
+      { key: 'student',             label: 'Student' },
+      { key: 'location',            label: 'Location' },
+      { key: 'borrow_date',         label: 'Borrowed',  format: showDate },
+      { key: 'due_date',            label: 'Due',       format: showDate },
+      { label: 'Returned',          render: returnedCell },
+      { key: 'condition_at_borrow', label: 'Condition at borrow' },
+      { key: 'condition_at_return', label: 'Condition at return' },
+      { label: 'Penalty',           render: penaltyCell },
+      { label: '',                  render: actionsCell }
+    ]);
+  }
+
+  // ----- flag damage pop-up -----
+  const flagDialog = document.getElementById('flagDialog');
+  const flagForm = document.getElementById('flagForm');
+  const flagError = document.getElementById('flagError');
+  const flagConfirm = document.getElementById('flagConfirm');
+  let flagging = null;
+
+  function openFlagDialog(r) {
+    flagging = r;
+    flagForm.reset();
+    flagError.hidden = true;
+    document.getElementById('flagItem').textContent = r.equipment + ' - ' + r.student;
+    document.getElementById('flagReason').value = (r.condition_at_return || '').slice(0, 100);
+    flagDialog.showModal();
+  }
+
+  document.getElementById('flagCancel').addEventListener('click', () => flagDialog.close());
+
+  flagForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    flagError.hidden = true;
+    flagConfirm.disabled = true;
+
+    const res = await fetch('/staff/api/return-desk/' + flagging.transaction_id + '/flag', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        amount: document.getElementById('flagAmount').value,
+        reason: document.getElementById('flagReason').value
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    flagConfirm.disabled = false;
+
+    if (res.ok) {
+      flagDialog.close();
+      loadDesk();
+      return;
+    }
+    flagError.textContent = data.error || 'Could not flag this order';
+    flagError.hidden = false;
+  });
+
+  // ----- start -----
+  loadDesk();
+  setInterval(loadDesk, 30000);   // pick up new returns without a page refresh
+</script>

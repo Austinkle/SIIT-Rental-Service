@@ -134,6 +134,12 @@ CREATE TABLE `borrow_transaction` (
     `location` ENUM('Rangsit','Bangkadi') NOT NULL,
     `close_order`         BIT DEFAULT 0 NOT NULL,
     `flag_damage`         BIT DEFAULT 0 NOT NULL,
+    `damage_amount`       DECIMAL(10,2) NULL,
+    `damage_reason`       VARCHAR(100) NULL,
+    `checked_by`          INT NULL,
+  ADD CONSTRAINT borrow_transaction_checked_by_foreign
+      FOREIGN KEY (checked_by) REFERENCES staff(user_id),
+  ADD CONSTRAINT chk_damage_amount CHECK (damage_amount IS NULL OR damage_amount > 0);
     -- FIX 2: correct direction: transaction -> request (1 request : 0..1 transaction)
     CONSTRAINT `borrow_transaction_request_id_foreign`
         FOREIGN KEY (`request_id`) REFERENCES `borrow_request`(`request_id`),
