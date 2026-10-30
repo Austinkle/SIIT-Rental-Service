@@ -6,3 +6,6 @@ dialog input[type=date] { display: block; width: 100%; margin-top: 4px; padding:
 #dlgHint { font-size: 12px; color: #64748B; }
 .dlg-error { color: #991B1B; background: #FEF2F2; padding: 8px 10px; font-size: 13px; }
 .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+dialog fieldset { border: 1px solid #CBD5E1; margin: 12px 0; }
+dialog fieldset label { margin: 6px 0; }
+dialog textarea { display: block; width: 100%; margin-top: 4px; padding: 8px; box-sizing: border-box; }

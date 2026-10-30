@@ -111,22 +111,22 @@ async function load() {
     tr.insertCell().textContent = r.name;
     tr.insertCell().textContent = r.category_name;
     tr.insertCell().textContent = r.equipment_id;
-    if(r.br_t_status == 'borrowed'){
-      tr.insertCell().textContent = r.br_t_status;
+    if(r.available_quantity == 0){
+      tr.insertCell().textContent = 'borrowed';
     }
     else if(r.status == 'active'){
       tr.insertCell().textContent = r.status;
     }
     tr.insertCell().textContent = r.location;
     tr.insertCell().textContent = r.description;
-    if(r.br_t_status == 'borrowed'){
-      tr.insertCell().textContent = 'Unavailable';
-    }
-    else if(r.status === 'active'){
+    const actionCell = tr.insertCell();
+    if (r.available_quantity > 0) {
       const btn = document.createElement('button');
       btn.textContent = 'Request Rental';
       btn.addEventListener('click', () => openRequestDialog(r));
-      tr.insertCell().appendChild(btn);
+      actionCell.appendChild(btn);
+    } else {
+      actionCell.textContent = 'Borrowed';
     }
   });
 }

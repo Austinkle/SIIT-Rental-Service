@@ -5,7 +5,7 @@ const view = name => path.join(__dirname, '..', 'views', 'student', name + '.htm
 const MAX_ADVANCE_DAYS = 14;   // how far ahead a student may book
 const MAX_LOAN_DAYS = 7;       // longest allowed loan
 const DAY = 24 * 60 * 60 * 1000;
-
+const CONDITIONS = ['Good', 'Minor Wear', 'Damage'];
 // ----- pages -----
 exports.homePage = (req, res) => res.sendFile(view('home'));
 exports.rental_catalog_Page = (req, res) => res.sendFile(view('rental_catalog'));
@@ -31,17 +31,17 @@ exports.getEquipment = async (req, res) => {
   const location = req.query.location || null; // Read location query parameter
   const active = req.query.status || null; // Read location query parameter
   const [rows] = await db.query(
-    `SELECT e.equipment_id, e.name, c.category_name, e.description, e.status, e.location, br_t.status AS br_t_status
-       FROM equipment e
-       JOIN category c ON c.category_id = e.category_id
-       LEFT JOIN borrow_transaction br_t ON br_t.equipment_id = e.equipment_id
-      WHERE e.status = 'active'
-        AND e.deleted_at IS NULL
-        AND (e.name LIKE ? OR c.category_name LIKE ?)
-        AND (? IS NULL OR e.category_id = ?)
-        AND (? IS NULL OR e.location = ?)
-      ORDER BY e.name
-      LIMIT 50`,
+    `SELECT e.equipment_id, e.name, c.category_name, e.description, e.status, e.location,
+        e.available_quantity, e.total_quantity
+   FROM equipment e
+   JOIN category c ON c.category_id = e.category_id
+  WHERE e.status = 'active'
+    AND e.deleted_at IS NULL
+    AND (e.name LIKE ? OR c.category_name LIKE ?)
+    AND (? IS NULL OR e.category_id = ?)
+    AND (? IS NULL OR e.location = ?)
+  ORDER BY e.name
+  LIMIT 50`,
     [like, like, categoryId, categoryId, location, location]);
 
   res.json(rows);
@@ -116,7 +116,8 @@ exports.getLocation = async (req, res) => {
 exports.getMyTransaction = async (req, res) => {
   const [rows] = await db.query(
     `SELECT e.name AS equipment, bt.transaction_id, bt.location,
-            bt.borrow_date, bt.due_date, bt.status
+            bt.borrow_date, bt.due_date, bt.status,
+            bt.close_order + 0 AS closed, bt.flag_damage + 0 AS flagged
        FROM borrow_transaction bt
        JOIN equipment e ON e.equipment_id = bt.equipment_id
       WHERE bt.borrower_id = ?
@@ -124,21 +125,34 @@ exports.getMyTransaction = async (req, res) => {
   res.json(rows);
 };
 
+
 exports.returnTransaction = async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid rental' });
 
+  const condition = typeof req.body.condition === 'string' ? req.body.condition : '';
+  const note = typeof req.body.note === 'string' ? req.body.note.replace(/\s+/g, ' ').trim() : '';
+
+  if (!CONDITIONS.includes(condition))
+    return res.status(400).json({ error: 'Choose the condition of the item' });
+  if (condition === 'Damage' && !note)
+    return res.status(400).json({ error: 'Please describe the damage' });
+
+  // both parts go into the one column condition_at_return, e.g. "Minor Wear: small scratch"
+  const value = note ? condition + ': ' + note : condition;
+  if (value.length > 100)
+    return res.status(400).json({ error: 'Details are too long (max ' + (98 - condition.length) + ' characters)' });
+
   try {
     const [result] = await db.query(
-      "UPDATE borrow_transaction SET status = 'returned' " +
+      "UPDATE borrow_transaction SET status = 'returned', condition_at_return = ? " +
       "WHERE transaction_id = ? AND borrower_id = ? AND status IN ('borrowed', 'overdue')",
-      [id, req.session.user.id]);       // user id comes from the session
+      [value, id, req.session.user.id]);
 
     if (result.affectedRows === 0)
       return res.status(404).json({ error: 'Rental not found or already returned' });
     res.json({ ok: true });
   } catch (err) {
-    // messages from the trigger, e.g. "This rental has not started yet"
     if (err.sqlState === '45000') return res.status(400).json({ error: err.sqlMessage });
     throw err;
   }

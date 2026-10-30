@@ -11,31 +11,55 @@
 <h1>MY REQUESTS</h1>
 <table id="requests" border="1"></table>
 
+<!-- Return pop-up -->
+<dialog id="returnDialog">
+  <form id="returnForm">
+    <h3>Return item</h3>
+    <p><strong id="retItem"></strong></p>
+
+    <fieldset>
+      <legend>Condition of the item</legend>
+      <label><input type="radio" name="condition" value="Good" required> Good</label>
+      <label><input type="radio" name="condition" value="Minor Wear"> Minor Wear</label>
+      <label><input type="radio" name="condition" value="Damage"> Damage</label>
+    </fieldset>
+
+    <label>Details (required for Damage)
+      <textarea id="retNote" maxlength="80" rows="3" placeholder="e.g. small scratch on the back"></textarea>
+    </label>
+
+    <p id="retError" class="dlg-error" role="alert" hidden></p>
+    <div class="dlg-actions">
+      <button type="button" id="retCancel">Cancel</button>
+      <button type="submit" id="retConfirm">Confirm return</button>
+    </div>
+  </form>
+</dialog>
+
 <script src="/nav.js"></script>
 <script src="/shared.js"></script>
 <script>
   const showDate = v => new Date(v).toLocaleDateString();
 
+  // ----- status text the student sees -----
+  function statusText(r) {
+    if (r.status === 'returned') {
+      if (r.closed)  return 'Returned - completed';
+      if (r.flagged) return 'Returned - damage reported, penalty to pay';
+      return 'Returned - waiting for staff check';
+    }
+    return r.status;
+  }
+
   function returnCell(r) {
     const box = document.createElement('span');
-    if (r.status === 'borrowed' || r.status === 'overdue') {   // no button once returned
+    if (r.status === 'borrowed' || r.status === 'overdue') {
       const btn = document.createElement('button');
       btn.textContent = 'Return';
-      btn.addEventListener('click', () => returnItem(r.transaction_id));
+      btn.addEventListener('click', () => openReturnDialog(r));
       box.appendChild(btn);
     }
     return box;
-  }
-
-  async function returnItem(id) {
-    if (!confirm('Mark this item as returned?')) return;
-
-    const res = await fetch('/student/api/Mytransaction/' + id + '/return', { method: 'POST' });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Could not return this item');
-    }
-    loadTransactions();      // refresh the table either way
   }
 
   function loadTransactions() {
@@ -45,13 +69,62 @@
       { key: 'location',       label: 'Location' },
       { key: 'borrow_date',    label: 'Borrow date', format: showDate },
       { key: 'due_date',       label: 'Due date',    format: showDate },
-      { key: 'status',         label: 'Status' },
-      { label: '',            render: returnCell }
+      { label: 'Status',       render: r => document.createTextNode(statusText(r)) },
+      { label: '',             render: returnCell }
     ]);
   }
 
-  loadTransactions();
+  // ----- return pop-up -----
+  const retDialog = document.getElementById('returnDialog');
+  const retForm = document.getElementById('returnForm');
+  const retError = document.getElementById('retError');
+  const retConfirm = document.getElementById('retConfirm');
+  let returning = null;                       // the rental the student clicked
 
+  function openReturnDialog(r) {
+    returning = r;
+    retForm.reset();                          // clears the radio buttons and the note
+    retError.hidden = true;
+    document.getElementById('retItem').textContent = r.equipment;
+    retDialog.showModal();
+  }
+
+  document.getElementById('retCancel').addEventListener('click', () => retDialog.close());
+
+  retForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    retError.hidden = true;
+    retConfirm.disabled = true;
+
+    try {
+      const res = await fetch('/student/api/Mytransaction/' + returning.transaction_id + '/return', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          condition: retForm.elements.condition.value,    // the chosen radio button
+          note: document.getElementById('retNote').value
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok) {
+        retDialog.close();
+        alert('Return submitted. Staff will check the item at the return desk.');
+        loadTransactions();
+        return;
+      }
+      retError.textContent = data.error || 'Could not return this item';
+      retError.hidden = false;
+    } catch {
+      retError.textContent = 'Network error. Please try again.';
+      retError.hidden = false;
+    } finally {
+      retConfirm.disabled = false;
+    }
+  });
+
+  // ----- start -----
+  loadTransactions();
   loadTable('/student/api/Myrequests', 'requests', [
     { key: 'equipment',    label: 'Equipment' },
     { key: 'location',     label: 'Location' },
