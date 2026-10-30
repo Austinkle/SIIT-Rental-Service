@@ -97,6 +97,7 @@ DROP TRIGGER IF EXISTS trg_borrow_transaction_bu//
 
 CREATE TRIGGER trg_borrow_transaction_bu BEFORE UPDATE ON `borrow_transaction` FOR EACH ROW
 BEGIN
+    -- existing rules: borrower must be a student, approver must be staff
     IF NEW.borrower_id <> OLD.borrower_id
        AND NOT EXISTS (SELECT 1 FROM `student` WHERE user_id = NEW.borrower_id) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Borrower must be a student';
@@ -104,6 +105,31 @@ BEGIN
     IF NEW.approved_by <> OLD.approved_by
        AND NOT EXISTS (SELECT 1 FROM `staff` WHERE user_id = NEW.approved_by) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Only staff can approve a borrow';
+    END IF;
+
+    -- NEW: a finished rental cannot go back to borrowed/overdue
+    IF OLD.status IN ('returned', 'damaged', 'lost')
+       AND NEW.status IN ('borrowed', 'overdue') THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'This rental is already closed';
+    END IF;
+
+    -- NEW: returning an item
+    IF OLD.status IN ('borrowed', 'overdue') AND NEW.status = 'returned' THEN
+        IF NOW() < OLD.borrow_date THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'This rental has not started yet';
+        END IF;
+        SET NEW.return_date = NOW();
+    END IF;
+END//
+
+DROP TRIGGER IF EXISTS trg_borrow_transaction_au//
+
+CREATE TRIGGER trg_borrow_transaction_au AFTER UPDATE ON `borrow_transaction` FOR EACH ROW
+BEGIN
+    IF OLD.status IN ('borrowed', 'overdue') AND NEW.status = 'returned' THEN
+        UPDATE `equipment`
+           SET available_quantity = available_quantity + 1
+         WHERE equipment_id = NEW.equipment_id;
     END IF;
 END//
 
@@ -307,19 +333,18 @@ DROP TRIGGER IF EXISTS trg_borrow_request_au//
 CREATE TRIGGER trg_borrow_request_au AFTER UPDATE ON `borrow_request` FOR EACH ROW
 BEGIN
     IF OLD.status = 'pending' AND NEW.status = 'approved' THEN
-        -- 1) one item is now borrowed
         UPDATE `equipment`
            SET available_quantity = available_quantity - 1
          WHERE equipment_id = NEW.equipment_id;
-
-        -- 2) create the borrow transaction (its status defaults to 'borrowed')
+        
         INSERT INTO `borrow_transaction`
             (request_id, equipment_id, borrower_id, approved_by,
-             borrow_date, due_date, condition_at_borrow)
+             borrow_date, due_date, condition_at_borrow, location)
         VALUES
             (NEW.request_id, NEW.equipment_id, NEW.user_id, NEW.handled_by,
-             NOW(), DATE_ADD(NOW(), INTERVAL 7 DAY),
-             (SELECT condition_note FROM `equipment` WHERE equipment_id = NEW.equipment_id));
+             NEW.borrow_date, NEW.due_date,                      -- the dates the student chose
+             (SELECT condition_note FROM `equipment` WHERE equipment_id = NEW.equipment_id),
+             NEW.location);
     END IF;
 END//
 

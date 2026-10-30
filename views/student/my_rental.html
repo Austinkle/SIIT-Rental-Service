@@ -1,16 +1,63 @@
 <link rel="stylesheet" href="/style.css">
 <body data-role="student">
 <nav id="nav"></nav>
+<p>---LIBRARY COUNTER - RANGSIT & BANGKADI</p>
+<h1>MY RENTALS</h1>
+<p>Currently borrowed items and rental history.</p>
 
-<h1>My requests</h1>
+<h1>CURRENTLY BORROWED</h1>
+<table id="transaction" border="1"></table>
+
+<h1>MY REQUESTS</h1>
 <table id="requests" border="1"></table>
 
 <script src="/nav.js"></script>
 <script src="/shared.js"></script>
 <script>
-  loadTable('/student/api/requests', 'requests', [
+  const showDate = v => new Date(v).toLocaleDateString();
+
+  function returnCell(r) {
+    const box = document.createElement('span');
+    if (r.status === 'borrowed' || r.status === 'overdue') {   // no button once returned
+      const btn = document.createElement('button');
+      btn.textContent = 'Return';
+      btn.addEventListener('click', () => returnItem(r.transaction_id));
+      box.appendChild(btn);
+    }
+    return box;
+  }
+
+  async function returnItem(id) {
+    if (!confirm('Mark this item as returned?')) return;
+
+    const res = await fetch('/student/api/Mytransaction/' + id + '/return', { method: 'POST' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Could not return this item');
+    }
+    loadTransactions();      // refresh the table either way
+  }
+
+  function loadTransactions() {
+    loadTable('/student/api/Mytransaction', 'transaction', [
+      { key: 'equipment',      label: 'Equipment' },
+      { key: 'transaction_id', label: 'Transaction ID' },
+      { key: 'location',       label: 'Location' },
+      { key: 'borrow_date',    label: 'Borrow date', format: showDate },
+      { key: 'due_date',       label: 'Due date',    format: showDate },
+      { key: 'status',         label: 'Status' },
+      { label: '',            render: returnCell }
+    ]);
+  }
+
+  loadTransactions();
+
+  loadTable('/student/api/Myrequests', 'requests', [
     { key: 'equipment',    label: 'Equipment' },
-    { key: 'request_date', label: 'Requested on' },
+    { key: 'location',     label: 'Location' },
+    { key: 'borrow_date',  label: 'Borrow date',  format: showDate },
+    { key: 'due_date',     label: 'Due date',     format: showDate },
+    { key: 'request_date', label: 'Requested on', format: showDate },
     { key: 'status',       label: 'Status' }
   ]);
 </script>
