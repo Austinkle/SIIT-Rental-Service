@@ -191,3 +191,23 @@ exports.deleteEquipment = async (req, res) => {
     throw err;
   }
 };
+
+exports.deleteUser = async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1)
+    return res.status(400).json({ error: 'Invalid account' });
+
+  try {
+    await db.query('CALL sp_admin_delete_user(?, ?)', [id, req.session.user.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    // the account is still referenced by requests, rentals, penalties, notifications, ...
+    if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.errno === 1451)
+      return res.status(409).json({
+        error: 'This account has requests, rentals, penalties or other history, so it cannot be deleted' });
+    // messages written with SIGNAL in the procedure
+    if (err.sqlState === '45000')
+      return res.status(409).json({ error: err.sqlMessage || 'Could not delete this account' });
+    throw err;
+  }
+};

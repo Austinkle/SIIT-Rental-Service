@@ -402,6 +402,103 @@ BEGIN
     END IF;
 END//
 
+-- ---------- Admin: add and delete equipment ----------
+DROP PROCEDURE IF EXISTS sp_admin_add_equipment//
+
+CREATE PROCEDURE sp_admin_add_equipment(
+    IN p_admin_user_id INT, IN p_name VARCHAR(100), IN p_category_id INT,
+    IN p_description TEXT, IN p_total_quantity INT, IN p_condition_note VARCHAR(100),
+    IN p_location VARCHAR(20))
+BEGIN
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        RESIGNAL;
+    END;
+    START TRANSACTION;
+    IF NOT EXISTS (SELECT 1 FROM `admin` WHERE user_id = p_admin_user_id) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Only an admin can add equipment';
+    END IF;
+    INSERT INTO `equipment`
+        (name, category_id, description, total_quantity, available_quantity,
+         condition_note, added_by, location)
+    VALUES
+        (p_name, p_category_id, p_description, p_total_quantity, p_total_quantity,
+         p_condition_note, p_admin_user_id, p_location);
+    COMMIT;
+    SELECT LAST_INSERT_ID() AS equipment_id;
+END//
+
+DROP PROCEDURE IF EXISTS sp_admin_delete_equipment//
+
+CREATE PROCEDURE sp_admin_delete_equipment(IN p_equipment_id INT, IN p_admin_user_id INT)
+BEGIN
+    DECLARE v_deleted_at DATETIME;
+    DECLARE v_available INT;
+    DECLARE v_total INT;
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        RESIGNAL;
+    END;
+    START TRANSACTION;
+    IF NOT EXISTS (SELECT 1 FROM `admin` WHERE user_id = p_admin_user_id) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Only an admin can delete equipment';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM `equipment` WHERE equipment_id = p_equipment_id) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Equipment not found';
+    END IF;
+    SELECT deleted_at, available_quantity, total_quantity
+      INTO v_deleted_at, v_available, v_total
+      FROM `equipment` WHERE equipment_id = p_equipment_id FOR UPDATE;
+    IF v_deleted_at IS NOT NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Equipment is already deleted';
+    END IF;
+    IF v_available < v_total THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Some units are still borrowed; cannot delete';
+    END IF;
+    UPDATE `equipment`
+       SET status = 'retired', deleted_by = p_admin_user_id, deleted_at = NOW()
+     WHERE equipment_id = p_equipment_id;
+    COMMIT;
+END//
+
+-- ---------- Admin: delete a student or staff account ----------
+DROP PROCEDURE IF EXISTS sp_admin_delete_user//
+
+CREATE PROCEDURE sp_admin_delete_user(IN p_user_id INT, IN p_admin_user_id INT)
+BEGIN
+    DECLARE v_type VARCHAR(10);
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET @deleting_user_id = NULL;
+        RESIGNAL;
+    END;
+    START TRANSACTION;
+    IF NOT EXISTS (SELECT 1 FROM `admin` WHERE user_id = p_admin_user_id) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Only an admin can delete accounts';
+    END IF;
+    IF p_user_id = p_admin_user_id THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'You cannot delete your own account';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM `user` WHERE user_id = p_user_id) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Account not found';
+    END IF;
+    SELECT user_type INTO v_type FROM `user` WHERE user_id = p_user_id;
+    IF v_type = 'admin' THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Admin accounts cannot be deleted here';
+    END IF;
+
+    -- the delete triggers on student/staff only allow this user to be removed
+    SET @deleting_user_id = p_user_id;
+    DELETE FROM `student` WHERE user_id = p_user_id;
+    DELETE FROM `staff`   WHERE user_id = p_user_id;
+    DELETE FROM `user`    WHERE user_id = p_user_id;
+    SET @deleting_user_id = NULL;
+    COMMIT;
+END//
+
 
 DELIMITER ;
 

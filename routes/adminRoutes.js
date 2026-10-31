@@ -19,4 +19,6 @@ router.post('/api/equipment', wrap(ctrl.addEquipment));
 router.patch('/api/equipment/:id/status', wrap(ctrl.setEquipmentStatus));
 router.delete('/api/equipment/:id', wrap(ctrl.deleteEquipment));
 
+router.delete('/api/users/:id', wrap(ctrl.deleteUser));
+
 module.exports = router;

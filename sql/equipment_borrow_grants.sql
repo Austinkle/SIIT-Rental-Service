@@ -29,3 +29,8 @@ GRANT EXECUTE ON PROCEDURE equipment_borrow.sp_delete_user    TO 'equip_app'@'lo
 
 GRANT INSERT ON equipment_borrow.notification TO 'equip_app'@'localhost';
 GRANT UPDATE (is_read) ON equipment_borrow.notification TO 'equip_app'@'localhost';
+
+GRANT EXECUTE ON PROCEDURE equipment_borrow.sp_admin_add_equipment    TO 'equip_app'@'localhost';
+GRANT EXECUTE ON PROCEDURE equipment_borrow.sp_admin_delete_equipment TO 'equip_app'@'localhost';
+
+GRANT EXECUTE ON PROCEDURE equipment_borrow.sp_admin_delete_user TO 'equip_app'@'localhost';

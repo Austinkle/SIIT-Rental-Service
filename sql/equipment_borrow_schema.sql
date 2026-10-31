@@ -82,9 +82,9 @@ CREATE TABLE `equipment` (
     CONSTRAINT `equipment_category_id_foreign`
         FOREIGN KEY (`category_id`) REFERENCES `category`(`category_id`),
     CONSTRAINT `equipment_added_by_foreign`
-        FOREIGN KEY (`added_by`) REFERENCES `staff`(`user_id`),
+        FOREIGN KEY (`added_by`) REFERENCES `user`(`user_id`),
     CONSTRAINT `equipment_deleted_by_foreign`
-        FOREIGN KEY (`deleted_by`) REFERENCES `staff`(`user_id`),
+        FOREIGN KEY (`deleted_by`) REFERENCES `user`(`user_id`),
     CONSTRAINT `chk_equipment_qty`
         CHECK (`available_quantity` >= 0 AND `available_quantity` <= `total_quantity`),
     CONSTRAINT `chk_equipment_deleted`
