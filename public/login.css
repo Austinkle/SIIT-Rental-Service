@@ -1,8 +1,8 @@
 /* สไตล์หน้า login (แปลงจาก Figma Make LoginPage.tsx) — แยกไฟล์จาก style.css เพื่อไม่ชนกับหน้า animation */
 :root {
-  --primary: #6a0fb8;
-  --accent: #8a2be2;
-  --ink: #1b0b45;      /* ม่วงเข้มจากมุมหน้าเปิด */
+  --primary: #6D28D9;
+  --accent:  #8B5CF6;
+  --ink:     #0B0B14;     /* ม่วงเข้มจากมุมหน้าเปิด */
   --surface-2: #F1F5F9;
   --text: #1E293B;
   --text-secondary: #475569;
@@ -30,9 +30,7 @@ body.login-body {
 .login-aside {
   position: relative;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 100% 0%, #1b0b45 0%, rgba(27,11,69,0) 48%),
-    linear-gradient(165deg, #6a0fb8 0%, #8a2be2 52%, #b46cf7 100%);
+  background: linear-gradient(170deg, #0B0B14 0%, #0B0B14 12%, #2E0A5E 40%, #6a0fb8 72%, #8a2be2 100%);
   color: #fff;
   padding: max(env(safe-area-inset-top), 44px) clamp(24px, 5vw, 56px) clamp(32px, 5vw, 56px);
   display: flex;
@@ -58,9 +56,11 @@ body.login-body {
   text-shadow: 0 4px 0 rgba(40, 0, 90, .4);
 }
 .hero-title .accent {
-  background: linear-gradient(135deg, #7ee8ff 0%, #ff8be0 55%, #ffe27a 100%);
+  background: linear-gradient(135deg, #F0ABFC 0%, #C084FC 50%, #A78BFA 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
-  text-shadow: none; filter: drop-shadow(0 4px 0 rgba(40, 0, 90, .4));
+  text-shadow: none;
+  filter: drop-shadow(0 4px 0 rgba(40, 0, 90, .4))
+          drop-shadow(0 0 24px rgba(192, 132, 252, .6));
 }
 .aside-copy { margin: 24px 0 0; font-size: 14px; color: rgba(255,255,255,.85); max-width: 360px; line-height: 1.6; }
 .aside-foot {
