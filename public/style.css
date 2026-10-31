@@ -77,9 +77,18 @@ a { color: inherit; }
 .mobile-menu a.danger { color: #DC2626; font-weight: 600; }
 .mobile-menu.open { display: block; }
 @media (max-width: 767px) {
-  .nav-links, .hist, .btn-signout { display: none; }
+  .nav-links, .btn-signout { display: none; }
   .menu-toggle { display: flex; }
   .brand-sub { display: none; }
+  /* keep back / forward visible on phones, but compact so the bar still fits */
+  .hist { gap: 4px; margin-right: 8px; flex-shrink: 0; }
+  .hist button { width: 30px; height: 30px; }
+  .brand { gap: 8px; min-width: 0; flex-shrink: 1; }
+  .brand > div:last-child { min-width: 0; }
+  .brand-mark { width: 32px; height: 32px; flex-shrink: 0; }
+  .brand-name { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .role-tag { margin-left: 6px; font-size: 11px; padding: 2px 6px; flex-shrink: 0; }
+  .nav-right { flex-shrink: 0; padding-left: 8px; }
 }
 
 /* ---------- Page header (dark band) ---------- */
@@ -194,6 +203,9 @@ a { color: inherit; }
 .pill.amber { background: var(--amber-bg); color: var(--amber-ink); }
 .pill.red { background: var(--red-bg); color: var(--red-ink); }
 .pill.violet { background: var(--violet-100); color: var(--primary); }
+/* nav count badges: solid so they never blend into the active link's tint */
+.n-badge.violet { background: var(--primary); color: #fff; }
+.n-badge.red { background: var(--red); color: #fff; }
 
 /* ---------- Catalog layout / filters ---------- */
 .page-body { max-width: 1440px; margin: 0 auto; padding: 36px 32px; }
@@ -209,7 +221,7 @@ a { color: inherit; }
   background: var(--surface); border: 1px solid var(--border); margin-bottom: 28px; }
 .filter-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin: 10px 0; }
 .cat-btn, .loc-btn { margin: 0 6px 10px 0; padding: 7px 14px; border-radius: 6px; border: 1px solid var(--ink); background: var(--surface); color: var(--ink); font-size: 13px; font-weight: 500; cursor: pointer; }
-.cat-btn.active, .loc-btn.active { background: var(--ink); color: #fff; font-weight: 700; }
+.cat-btn.active, .loc-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 700; }
 .search-box { position: relative; flex: 1 1 220px; min-width: 180px; }
 .search-box .icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
 .input, .search-box input { width: 100%; padding: 9px 12px; font-size: 13px; font-family: inherit; border: 1px solid var(--border);
@@ -290,6 +302,27 @@ a { color: inherit; }
 .table-wrap td { padding: 10px 14px; border-top: 1px solid var(--border); }
 .table-wrap tbody tr:hover { background: var(--violet-100); }
 
+/* tables become stacked cards on phones (labels come from data-label, set in ui.js) */
+@media (max-width: 767px) {
+  .table-wrap { background: none; border: 0; overflow: visible; }
+  .table-wrap table, .table-wrap tbody { display: block; }
+  .table-wrap thead { display: none; }
+  .table-wrap caption { display: block; padding: 16px 0; }
+  .table-wrap tr { display: block; position: relative; background: var(--surface); border: 1px solid var(--ink);
+    border-left: 6px solid var(--primary); border-radius: 6px; padding: 12px 14px; margin-bottom: 12px; }
+  .table-wrap tbody tr:hover { background: var(--surface); }
+  .table-wrap td { display: flex; gap: 12px; align-items: baseline; padding: 4px 0; border: 0; overflow-wrap: anywhere; }
+  .table-wrap td:empty { display: none; }
+  .table-wrap td[data-label]::before { content: attr(data-label); flex: 0 0 78px; font-size: 10px; font-weight: 700;
+    color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+  .table-wrap td:first-child { font-size: 15px; font-weight: 700; color: var(--ink); padding-right: 44px; }
+  .table-wrap td:first-child::before { display: none; }
+  .table-wrap td:not([data-label]) { flex-wrap: wrap; gap: 6px; padding-top: 8px; }
+  .table-wrap td:not([data-label]) .btn { margin: 0 !important; }
+  /* the last label-less cell is the delete (X) button: pin it to the card corner */
+  .table-wrap td.row-x { position: absolute; top: 8px; right: 10px; padding: 0; }
+}
+
 /* ---------- Dialog ---------- */
 dialog { border: 1px solid var(--ink); border-radius: 6px; padding: 0; width: min(420px, 92vw); color: var(--text);
   box-shadow: 8px 8px 0 var(--primary); }
@@ -340,3 +373,46 @@ dialog fieldset label { margin: 6px 0; font-weight: 500; font-size: 14px; color:
 /* scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 99px; }
+
+
+/* ---- notification bell + dropdown (student navbar) ---- */
+.bell-wrap { position: relative; }
+.bell-btn { position: relative; width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.bell-btn:hover { border-color: var(--ink); color: var(--ink); }
+.bell-dot { position: absolute; top: 7px; right: 7px; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--red); border: 2px solid #fff; box-sizing: content-box; }
+.bell-dot[hidden], .notif-panel[hidden] { display: none; }
+.notif-panel { position: absolute; right: 0; top: calc(100% + 8px); width: 340px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-xl); overflow: hidden; z-index: 100; }
+.notif-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px;
+  border-bottom: 1px solid var(--border); font-weight: 600; font-size: 13px; color: var(--text); }
+.notif-markall { border: 0; background: none; color: var(--primary); font-size: 12px; font-weight: 600; cursor: pointer; padding: 2px 4px; }
+.notif-markall:hover { text-decoration: underline; }
+.notif-list { max-height: 360px; overflow-y: auto; }
+.notif-item { display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left; padding: 12px 16px;
+  border: 0; border-bottom: 1px solid var(--border); background: var(--surface); cursor: pointer; font: inherit; }
+.notif-item:hover { background: var(--surface-2); }
+.notif-item.unread { background: var(--violet-100); }
+.notif-ic { flex-shrink: 0; width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center;
+  justify-content: center; background: var(--surface-2); color: var(--text-secondary); }
+.notif-ic.warn { background: var(--amber-bg); color: var(--amber-ink); }
+.notif-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.notif-msg { font-size: 13px; line-height: 1.5; color: var(--text-secondary); }
+.notif-item.unread .notif-msg { color: var(--text); font-weight: 600; }
+.notif-time { font-size: 11px; color: var(--text-muted); }
+.notif-unread { flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--primary); margin-top: 6px; }
+.notif-empty { padding: 28px 16px; text-align: center; font-size: 13px; color: var(--text-muted); }
+.notif-foot { display: block; padding: 11px 16px; text-align: center; font-size: 13px; font-weight: 600;
+  color: var(--primary); text-decoration: none; }
+.notif-foot:hover { background: var(--surface-2); }
+@media (max-width: 767px) { .notif-panel { position: fixed; top: 72px; left: 12px; right: 12px; width: auto; } }
+
+/* full notifications page */
+.notif-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.notif-page .notif-list { max-height: none; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--surface); }
+.notif-page .notif-item { padding: 16px 20px; cursor: default; align-items: center; }
+.notif-page .notif-item:hover { background: var(--surface); }
+.notif-page .notif-item.unread:hover { background: var(--violet-100); }
+.notif-page .notif-item:last-child { border-bottom: 0; }
+.notif-page .notif-msg { font-size: 14px; }

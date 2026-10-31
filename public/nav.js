@@ -1,13 +1,12 @@
 (function () {
-  const { h, icon } = UI;
+  const { h, icon, fmtDateTime } = UI;
   const role = document.body.dataset.role;
 
   const menus = {
     student: [
       { label: 'Home',           href: '/student/home' },
       { label: 'Rental Catalog', href: '/student/rental_catalog' },
-      { label: 'My Rental',      href: '/student/my_rental' },
-      { label: 'Notifications',  href: '/student/notifications' }
+      { label: 'My Rental',      href: '/student/my_rental' }
     ],
     staff: [
       { label: 'Requests',    href: '/staff/requests' },
@@ -21,6 +20,7 @@
   };
 
   const items = menus[role] || [];
+  let bellDot = null;   // red dot on the bell (student only)
 
   // Normalize route paths (/student -> /student/home, /staff -> /staff/requests)
   let path = location.pathname.replace(/\/$/, '');
@@ -40,6 +40,68 @@
     return s;
   }
 
+  // ----- notification bell (student): dropdown with the latest notifications -----
+  function buildBell() {
+    const TYPES = {
+      overdue:     { ic: 'triangle-alert', cls: 'warn' },
+      late_return: { ic: 'clock',          cls: 'warn' }
+    };
+    bellDot = h('span', { class: 'bell-dot', hidden: true });
+    const list = h('div', { class: 'notif-list' });
+    const markAll = h('button', { type: 'button', class: 'notif-markall', text: 'Mark all as read' });
+    const panel = h('div', { class: 'notif-panel', role: 'dialog', 'aria-label': 'Notifications', hidden: true },
+      h('div', { class: 'notif-head' }, h('span', { text: 'Notifications' }), markAll),
+      list,
+      h('a', { class: 'notif-foot', href: '/student/notifications', text: 'View all notifications' }));
+    const btn = h('button', { type: 'button', class: 'bell-btn', 'aria-label': 'Notifications',
+      'aria-haspopup': 'true', 'aria-expanded': 'false' }, icon('bell', 20), bellDot);
+    const wrap = h('div', { class: 'bell-wrap' }, btn, panel);
+
+    async function load() {
+      try {
+        const res = await fetch('/student/api/notifications');
+        if (!res.ok) throw new Error('bad status');
+        const rows = (await res.json()).slice(0, 6);
+        list.replaceChildren();
+        if (rows.length === 0) list.append(h('div', { class: 'notif-empty', text: 'No notifications yet.' }));
+        rows.forEach(r => {
+          const t = TYPES[r.type] || { ic: 'mail', cls: '' };
+          list.append(h('button', { type: 'button', class: 'notif-item' + (r.is_read ? '' : ' unread'), onclick: () => readOne(r) },
+            h('span', { class: 'notif-ic ' + t.cls }, icon(t.ic, 16)),
+            h('span', { class: 'notif-body' },
+              h('span', { class: 'notif-msg', text: r.message }),
+              h('span', { class: 'notif-time', text: fmtDateTime(r.created_at) })),
+            r.is_read ? null : h('span', { class: 'notif-unread' })));
+        });
+      } catch {
+        list.replaceChildren(h('div', { class: 'notif-empty', text: 'Could not load notifications.' }));
+      }
+    }
+
+    async function readOne(r) {
+      if (r.is_read) return;
+      await fetch('/student/api/notifications/' + r.notification_id + '/read', { method: 'POST' }).catch(() => null);
+      await load();
+      updateBadges();
+    }
+
+    markAll.addEventListener('click', async () => {
+      await fetch('/student/api/notifications/read-all', { method: 'POST' }).catch(() => null);
+      await load();
+      updateBadges();
+    });
+
+    function setOpen(open) {
+      panel.hidden = !open;
+      btn.setAttribute('aria-expanded', String(open));
+      if (open) load();
+    }
+    btn.addEventListener('click', () => setOpen(panel.hidden));
+    document.addEventListener('click', e => { if (!panel.hidden && !wrap.contains(e.target)) setOpen(false); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !panel.hidden) { setOpen(false); btn.focus(); } });
+    return wrap;
+  }
+
   // ----- top bar -----
   const nav = document.getElementById('nav');
   if (nav) {
@@ -49,8 +111,9 @@
     const fwd  = h('button', { type: 'button', 'aria-label': 'Go forward', onclick: () => history.forward() }, icon('arrow-right', 17));
     if (history.length <= 1) back.disabled = true;
 
+    const mobileItems = role === 'student' ? items.concat([{ label: 'Notifications', href: '/student/notifications' }]) : items;
     const links = items.map(i => h('a', { href: i.href, class: path === i.href ? 'active' : '', 'data-href': i.href, text: i.label }));
-    const mobileLinks = items.map(i => h('a', { href: i.href, class: path === i.href ? 'active' : '', 'data-href': i.href, text: i.label }));
+    const mobileLinks = mobileItems.map(i => h('a', { href: i.href, class: path === i.href ? 'active' : '', 'data-href': i.href, text: i.label }));
     const mobile = h('div', { class: 'mobile-menu' }, mobileLinks, h('a', { href: '/logout', class: 'danger', text: 'Sign out' }));
     const toggle = h('button', { type: 'button', class: 'menu-toggle', 'aria-label': 'Menu', 'aria-expanded': 'false',
       onclick: () => { const o = mobile.classList.toggle('open'); toggle.setAttribute('aria-expanded', o); } }, icon('menu', 18, 2));
@@ -66,6 +129,7 @@
         role !== 'student' ? h('span', { class: 'role-tag font-display', text: role.toUpperCase() }) : null,
         h('div', { class: 'nav-links' }, links),
         h('div', { class: 'nav-right' },
+          role === 'student' ? buildBell() : null,
           h('a', { class: 'btn-signout', href: '/logout' }, icon('log-out', 14), 'Sign out'),
           toggle)),
       mobile);
@@ -97,7 +161,8 @@
         }
         if (notifRes && notifRes.ok) {
           const { count } = await notifRes.json();
-          showBadge('/student/notifications', count, false);
+          showBadge('/student/notifications', count, false);   // number on the mobile-menu link
+          if (bellDot) bellDot.hidden = count === 0;           // red dot on the bell
         }
       } else if (role === 'staff') {
         const res = await fetch('/staff/api/return-desk/count').catch(() => null);

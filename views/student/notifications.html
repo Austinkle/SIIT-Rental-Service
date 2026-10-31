@@ -1,46 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notifications · SIIT Rental Service</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css">
+</head>
 <body data-role="student">
 <nav id="nav"></nav>
 
-<h1>Notifications</h1>
-<button id="readAll">Mark all as read</button>
-<table id="notes" border="1"></table>
+<header class="page-header">
+  <div>
+    <div class="eyebrow font-display">Library Counter · Rangsit &amp; Bangkadi</div>
+    <h1 class="font-display">Notifications</h1>
+    <p>Overdue and late-return alerts sent by library staff.</p>
+  </div>
+</header>
 
+<div class="page-body reading notif-page">
+  <div class="notif-toolbar">
+    <span class="pill violet" id="unreadCount">0 unread</span>
+    <button type="button" class="btn btn-dark" id="readAll">Mark all as read</button>
+  </div>
+  <div id="notes"></div>
+</div>
+
+<footer id="footer"></footer>
+
+<script src="/icons.js"></script>
+<script src="/ui.js"></script>
 <script src="/nav.js"></script>
-<script src="/shared.js"></script>
 <script>
-  function messageCell(r) {
-    const span = document.createElement('span');
-    span.textContent = r.message;                         // plain text, never HTML
-    if (!r.is_read) span.style.fontWeight = 'bold';       // unread messages are bold
-    return span;
+  const { h, icon, fmtDateTime } = UI;
+  const TYPES = {
+    overdue:     { ic: 'triangle-alert', cls: 'warn', label: 'Overdue' },
+    late_return: { ic: 'clock',          cls: 'warn', label: 'Late return' }
+  };
+  const box = document.getElementById('notes');
+
+  async function readOne(r) {
+    await fetch('/student/api/notifications/' + r.notification_id + '/read', { method: 'POST' });
+    refresh();
   }
 
-  function readCell(r) {
-    const box = document.createElement('span');
-    if (!r.is_read) {
-      const btn = document.createElement('button');
-      btn.textContent = 'Mark read';
-      btn.addEventListener('click', async () => {
-        await fetch('/student/api/notifications/' + r.notification_id + '/read', { method: 'POST' });
-        refresh();
-      });
-      box.appendChild(btn);
+  function render(rows) {
+    box.replaceChildren();
+    document.getElementById('unreadCount').textContent = rows.filter(r => !r.is_read).length + ' unread';
+
+    if (rows.length === 0) {
+      box.append(h('div', { class: 'empty' },
+        h('div', { class: 't font-display', text: 'All caught up' }),
+        'You have no notifications.'));
+      return;
     }
-    return box;
+
+    const list = h('div', { class: 'notif-list' });
+    rows.forEach(r => {
+      const t = TYPES[r.type] || { ic: 'mail', cls: '', label: 'Notice' };
+      list.append(h('div', { class: 'notif-item' + (r.is_read ? '' : ' unread') },
+        h('span', { class: 'notif-ic ' + t.cls }, icon(t.ic, 16)),
+        h('span', { class: 'notif-body' },
+          h('span', { class: 'notif-msg', text: r.message }),            // plain text, never HTML
+          h('span', { class: 'notif-time', text: t.label + ' · ' + fmtDateTime(r.created_at) })),
+        r.is_read ? null : h('button', { type: 'button', class: 'notif-markall', text: 'Mark read', onclick: () => readOne(r) })));
+    });
+    box.append(list);
   }
 
-  function loadNotes() {
-    loadTable('/student/api/notifications', 'notes', [
-      { key: 'created_at', label: 'Date', format: v => new Date(v).toLocaleString() },
-      { label: 'Message',  render: messageCell },
-      { label: '',         render: readCell }
-    ]);
-  }
-
-  function refresh() {
-    loadNotes();
-    if (window.refreshBadge) refreshBadge();              // update the number in the nav bar
+  async function refresh() {
+    try {
+      const res = await fetch('/student/api/notifications');
+      if (!res.ok) throw new Error('bad status');
+      render(await res.json());
+    } catch {
+      box.replaceChildren(h('div', { class: 'empty', text: 'Could not load notifications.' }));
+    }
+    if (window.refreshBadge) refreshBadge();               // update the red dot on the bell
   }
 
   document.getElementById('readAll').addEventListener('click', async () => {
@@ -48,6 +86,8 @@
     refresh();
   });
 
-  loadNotes();
-  setInterval(loadNotes, 30000);
+  refresh();
+  setInterval(refresh, 30000);
 </script>
+</body>
+</html>
