@@ -43,6 +43,7 @@
 
   // ----- status text the student sees -----
   function statusText(r) {
+    if (r.status === 'borrowed' && new Date(r.due_date) < new Date()) return 'Overdue - please return it';
     if (r.status === 'returned') {
       if (r.closed)  return 'Returned - completed';
       if (r.flagged) return 'Returned - damage reported, penalty to pay';

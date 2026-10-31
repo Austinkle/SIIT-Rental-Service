@@ -1,0 +1,53 @@
+<link rel="stylesheet" href="/style.css">
+<body data-role="student">
+<nav id="nav"></nav>
+
+<h1>Notifications</h1>
+<button id="readAll">Mark all as read</button>
+<table id="notes" border="1"></table>
+
+<script src="/nav.js"></script>
+<script src="/shared.js"></script>
+<script>
+  function messageCell(r) {
+    const span = document.createElement('span');
+    span.textContent = r.message;                         // plain text, never HTML
+    if (!r.is_read) span.style.fontWeight = 'bold';       // unread messages are bold
+    return span;
+  }
+
+  function readCell(r) {
+    const box = document.createElement('span');
+    if (!r.is_read) {
+      const btn = document.createElement('button');
+      btn.textContent = 'Mark read';
+      btn.addEventListener('click', async () => {
+        await fetch('/student/api/notifications/' + r.notification_id + '/read', { method: 'POST' });
+        refresh();
+      });
+      box.appendChild(btn);
+    }
+    return box;
+  }
+
+  function loadNotes() {
+    loadTable('/student/api/notifications', 'notes', [
+      { key: 'created_at', label: 'Date', format: v => new Date(v).toLocaleString() },
+      { label: 'Message',  render: messageCell },
+      { label: '',         render: readCell }
+    ]);
+  }
+
+  function refresh() {
+    loadNotes();
+    if (window.refreshBadge) refreshBadge();              // update the number in the nav bar
+  }
+
+  document.getElementById('readAll').addEventListener('click', async () => {
+    await fetch('/student/api/notifications/read-all', { method: 'POST' });
+    refresh();
+  });
+
+  loadNotes();
+  setInterval(loadNotes, 30000);
+</script>

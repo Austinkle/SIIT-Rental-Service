@@ -300,7 +300,7 @@ DROP PROCEDURE IF EXISTS sp_add_equipment//
 CREATE PROCEDURE sp_add_equipment(
     IN p_staff_user_id INT, IN p_name VARCHAR(100), IN p_category_id INT,
     IN p_description TEXT, IN p_total_quantity INT, IN p_condition_note VARCHAR(100),
-    IN p_location VARCHAR(10))
+    IN p_location VARCHAR(20))
 BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
@@ -312,9 +312,11 @@ BEGIN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Only staff can add equipment';
     END IF;
     INSERT INTO `equipment`
-        (name, category_id, description, total_quantity, available_quantity, condition_note, location, added_by)
+        (name, category_id, description, total_quantity, available_quantity,
+         condition_note, added_by, location)
     VALUES
-        (p_name, p_category_id, p_description, p_total_quantity, p_total_quantity, p_condition_note, p_location, p_staff_user_id);
+        (p_name, p_category_id, p_description, p_total_quantity, p_total_quantity,
+         p_condition_note, p_staff_user_id, p_location);
     COMMIT;
     SELECT LAST_INSERT_ID() AS equipment_id;
 END//
@@ -324,6 +326,8 @@ DROP PROCEDURE IF EXISTS sp_delete_equipment//
 CREATE PROCEDURE sp_delete_equipment(IN p_equipment_id INT, IN p_staff_user_id INT)
 BEGIN
     DECLARE v_deleted_at DATETIME;
+    DECLARE v_available INT;
+    DECLARE v_total INT;
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
         ROLLBACK;
@@ -336,14 +340,14 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM `equipment` WHERE equipment_id = p_equipment_id) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Equipment not found';
     END IF;
-    SELECT deleted_at INTO v_deleted_at FROM `equipment`
-        WHERE equipment_id = p_equipment_id FOR UPDATE;
+    SELECT deleted_at, available_quantity, total_quantity
+      INTO v_deleted_at, v_available, v_total
+      FROM `equipment` WHERE equipment_id = p_equipment_id FOR UPDATE;
     IF v_deleted_at IS NOT NULL THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Equipment is already deleted';
     END IF;
-    IF EXISTS (SELECT 1 FROM `borrow_transaction`
-               WHERE equipment_id = p_equipment_id AND status IN ('borrowed', 'overdue')) THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Equipment is still borrowed; cannot delete';
+    IF v_available < v_total THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Some units are still borrowed; cannot delete';
     END IF;
     UPDATE `equipment`
        SET status = 'retired', deleted_by = p_staff_user_id, deleted_at = NOW()

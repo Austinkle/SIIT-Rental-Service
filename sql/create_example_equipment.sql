@@ -9,4 +9,5 @@ VALUES ('Compact Auto Open/Close Umbrella', 1, 1, 1,'Rangsit','Windproof compact
 ('6-Socket Power Strip with USB (2 m)', 3, 1, 1,'Bangkadi','6 AC outlets + 2 USB-A 2.4A ports, 2 m flat cable, master switch, and 2 500 J surge protection. Compact enough for laptop bags. Great for presentations and group projects.');
 
 -- Check the student's id first:  SELECT user_id, email FROM `user`;
-INSERT INTO borrow_request (user_id, equipment_id) VALUES (1, 1);
+INSERT INTO borrow_request (user_id, equipment_id, borrow_date, due_date, location)
+VALUES (1, 1, NOW(), DATE_ADD(NOW(), INTERVAL 3 DAY), 'Rangsit');
