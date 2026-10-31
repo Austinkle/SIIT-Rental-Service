@@ -12,7 +12,7 @@ CREATE TABLE `user` (
     `last_name`     VARCHAR(50) NOT NULL,
     `email`         VARCHAR(100) NOT NULL,
     `password_hash` VARCHAR(255) NOT NULL,
-    `phone`         VARCHAR(20) NULL,
+    `phone`         VARCHAR(10) NULL,
     `user_type`     VARCHAR(10) NOT NULL,
     UNIQUE KEY `user_email_unique` (`email`),
     UNIQUE KEY `user_id_type_unique` (`user_id`, `user_type`),
@@ -28,9 +28,10 @@ CREATE TABLE `student` (
     `user_type`  VARCHAR(10) NOT NULL DEFAULT 'student',
     `student_id` BIGINT NOT NULL,
     `major`      VARCHAR(50) NULL,
-    `year`       INT NULL,
+    `current_year` TINYINT NULL,
     UNIQUE KEY `student_student_id_unique` (`student_id`),
     CONSTRAINT `chk_student_type` CHECK (`user_type` = 'student'),
+    CONSTRAINT chk_student_year CHECK (current_year BETWEEN 1 AND 6),
     CONSTRAINT `student_user_fk`
         FOREIGN KEY (`user_id`, `user_type`) REFERENCES `user`(`user_id`, `user_type`)
 ) ENGINE=InnoDB;
@@ -108,7 +109,7 @@ CREATE TABLE `borrow_request` (
     `handled_at`   DATETIME NULL,   -- NEW: when they did it
     `borrow_date`         DATETIME NOT NULL,
     `due_date`            DATETIME NOT NULL,
-    `location` ENUM('Rangsit','Bangkadi') NOT NULL,
+    `location` ENUM('Rangsit','Bangkadi') NOT NULL
     CONSTRAINT `borrow_request_user_id_foreign`
         FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`),
     CONSTRAINT `borrow_request_equipment_id_foreign`
@@ -137,10 +138,9 @@ CREATE TABLE `borrow_transaction` (
     `damage_amount`       DECIMAL(10,2) NULL,
     `damage_reason`       VARCHAR(100) NULL,
     `checked_by`          INT NULL,
-    CONSTRAINT `borrow_transaction_checked_by_foreign`
-        FOREIGN KEY (`checked_by`) REFERENCES `staff`(`user_id`),
-    CONSTRAINT `chk_damage_amount`
-        CHECK (`damage_amount` IS NULL OR `damage_amount` > 0),
+  ADD CONSTRAINT borrow_transaction_checked_by_foreign
+      FOREIGN KEY (checked_by) REFERENCES staff(user_id),
+  ADD CONSTRAINT chk_damage_amount CHECK (damage_amount IS NULL OR damage_amount > 0);
     -- FIX 2: correct direction: transaction -> request (1 request : 0..1 transaction)
     CONSTRAINT `borrow_transaction_request_id_foreign`
         FOREIGN KEY (`request_id`) REFERENCES `borrow_request`(`request_id`),
@@ -168,22 +168,4 @@ CREATE TABLE `penalty` (
     CONSTRAINT `penalty_transaction_id_foreign`
         FOREIGN KEY (`transaction_id`) REFERENCES `borrow_transaction`(`transaction_id`),
     CONSTRAINT `chk_penalty_amount` CHECK (`amount` >= 0)
-) ENGINE=InnoDB;
-
-CREATE TABLE `notification` (
-    `notification_id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `user_id`         INT NOT NULL,          -- the student who receives it
-    `transaction_id`  INT NULL,              -- the rental it is about
-    `sent_by`         INT NULL,              -- the staff member who pressed Notify
-    `type`            ENUM('overdue', 'late_return') NOT NULL,
-    `message`         VARCHAR(500) NOT NULL,
-    `created_at`      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `is_read`         TINYINT(1) NOT NULL DEFAULT 0,   -- 0 = unread, 1 = read (TINYINT is easier to use than BIT)
-    KEY `notification_user_idx` (`user_id`, `is_read`, `created_at`),
-    CONSTRAINT `notification_user_id_foreign`
-        FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`),
-    CONSTRAINT `notification_transaction_id_foreign`
-        FOREIGN KEY (`transaction_id`) REFERENCES `borrow_transaction`(`transaction_id`),
-    CONSTRAINT `notification_sent_by_foreign`
-        FOREIGN KEY (`sent_by`) REFERENCES `staff`(`user_id`)
 ) ENGINE=InnoDB;
