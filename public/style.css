@@ -140,6 +140,8 @@ a { color: inherit; }
 .btn-outline:hover:not(:disabled) { background: var(--surface-2); }
 .btn-soft { background: rgba(109,40,217,.06); color: var(--primary); border-color: var(--violet-300); }
 .btn-block { width: 100%; padding: 9px; font-size: 13px; font-weight: 700; }
+.add-btn { padding: 8px 16px; border-radius: 6px; background: var(--ink); color: #fff; font-size: 13px; font-weight: 700; border: none; cursor: pointer; }
+.add-btn:hover { background: var(--primary); }
 
 /* ---------- Category tiles (home) ---------- */
 .cat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
@@ -205,6 +207,9 @@ a { color: inherit; }
 .chip:hover:not(.active) { background: var(--surface-2); }
 .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding: 14px 16px; border-radius: 6px;
   background: var(--surface); border: 1px solid var(--border); margin-bottom: 28px; }
+.filter-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin: 10px 0; }
+.cat-btn, .loc-btn { margin: 0 6px 10px 0; padding: 7px 14px; border-radius: 6px; border: 1px solid var(--ink); background: var(--surface); color: var(--ink); font-size: 13px; font-weight: 500; cursor: pointer; }
+.cat-btn.active, .loc-btn.active { background: var(--ink); color: #fff; font-weight: 700; }
 .search-box { position: relative; flex: 1 1 220px; min-width: 180px; }
 .search-box .icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
 .input, .search-box input { width: 100%; padding: 9px 12px; font-size: 13px; font-family: inherit; border: 1px solid var(--border);
@@ -294,13 +299,13 @@ dialog h3 { margin: 0 0 12px; font-family: 'Big Shoulders Display', sans-serif; 
   text-transform: uppercase; color: var(--ink); line-height: 1; }
 dialog p { margin: 0 0 10px; font-size: 14px; }
 dialog label { display: block; margin: 12px 0; font-size: 12px; font-weight: 600; color: var(--text-secondary); }
-dialog input[type=date], dialog input[type=number], dialog input[type=text], dialog textarea {
+dialog input[type=date], dialog input[type=number], dialog input[type=text], dialog select, dialog textarea {
   display: block; width: 100%; margin-top: 4px; padding: 9px 12px; font: inherit; font-size: 14px; font-weight: 400;
   border: 0; border-bottom: 2px solid var(--ink); background: var(--surface-2); color: var(--text); outline: 0; }
 dialog textarea { resize: vertical; }
 dialog fieldset { border: 1px solid var(--border); border-radius: 6px; margin: 12px 0; padding: 4px 12px 8px; }
 dialog legend { font-size: 12px; font-weight: 700; color: var(--text-secondary); padding: 0 6px; }
-dialog fieldset label { margin: 6px 0; font-weight: 500; font-size: 14px; color: var(--text); }
+dialog fieldset label { margin: 6px 0; font-weight: 500; font-size: 14px; color: var(--text); display: block; }
 #dlgHint { font-size: 12px; color: var(--text-muted); }
 .dlg-error { color: var(--red-ink); background: var(--red-bg); border-left: 3px solid #DC2626; padding: 8px 10px; font-size: 13px; }
 .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
@@ -318,7 +323,7 @@ dialog fieldset label { margin: 6px 0; font-weight: 500; font-size: 14px; color:
 .foot-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 40px; margin-bottom: 40px; }
 .foot-h { font-size: 16px; font-weight: 600; letter-spacing: .14em; color: var(--violet-400); text-transform: uppercase; margin-bottom: 16px; }
 .foot-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-.foot-brand .m { width: 32px; height: 32px; border-radius: 9px; background: var(--primary); display: flex; align-items: center; justify-content: center; }
+.foot-brand .m { width: 32px; height: 32px; border-radius: 99px; background: var(--primary); display: flex; align-items: center; justify-content: center; }
 .foot-brand .a { font-size: 13px; font-weight: 800; color: #fff; }
 .foot-brand .b { font-size: 10px; font-weight: 600; color: var(--accent); letter-spacing: .06em; }
 .site-footer p { font-size: 13px; line-height: 1.7; margin: 0; max-width: 260px; }

@@ -79,8 +79,14 @@ const plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
 const dateBox = (label, value, kind) => h('div', { class: 'info ' + (kind || '') },
   h('div', { class: 'k', text: label }), h('div', { class: 'v', text: value }));
 
+// Helper to check if item is overdue dynamically
+function isOverdue(r) {
+  return r.status === 'overdue' || (r.status === 'borrowed' && new Date(r.due_date) < new Date());
+}
+
 // ----- status text the student sees -----
 function statusText(r) {
+  if (isOverdue(r)) return 'Overdue - please return it';
   if (r.status === 'returned') {
     if (r.closed)  return 'Returned - completed';
     if (r.flagged) return 'Returned - damage reported, penalty to pay';
@@ -90,7 +96,7 @@ function statusText(r) {
 }
 
 function activeCard(r) {
-  const late = r.status === 'overdue';
+  const late = isOverdue(r);
   return h('div', { class: 'row-card' + (late ? ' overdue' : '') },
     h('div', { class: 'row-top' },
       h('div', {},
@@ -169,7 +175,7 @@ let returning = null;                       // the rental the student clicked
 
 function openReturnDialog(r) {
   returning = r;
-  retForm.reset();                          // clears the radio buttons and the note
+  retForm.reset();                           // clears the radio buttons and the note
   retError.hidden = true;
   document.getElementById('retItem').textContent = r.equipment;
   retDialog.showModal();

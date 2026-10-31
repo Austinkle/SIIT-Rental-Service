@@ -6,24 +6,28 @@
     student: [
       { label: 'Home',           href: '/student/home' },
       { label: 'Rental Catalog', href: '/student/rental_catalog' },
-      { label: 'My Rental',      href: '/student/my_rental' }
+      { label: 'My Rental',      href: '/student/my_rental' },
+      { label: 'Notifications',  href: '/student/notifications' }
     ],
     staff: [
       { label: 'Requests',    href: '/staff/requests' },
-      { label: 'Return Desk', href: '/staff/return_desk' }
+      { label: 'Return Desk', href: '/staff/return_desk' },
+      { label: 'Inventory',   href: '/staff/inventory' },
+      { label: 'Overdue',     href: '/staff/overdue' }
     ],
     admin: [
       { label: 'Home', href: '/admin' }
     ]
   };
+
   const items = menus[role] || [];
 
-  // /student, /student/ -> home;  /staff, /staff/ -> requests
+  // Normalize route paths (/student -> /student/home, /staff -> /staff/requests)
   let path = location.pathname.replace(/\/$/, '');
   if (path === '/student') path = '/student/home';
   if (path === '/staff') path = '/staff/requests';
 
-  // Orca mark (same artwork as the Figma design)
+  // Orca mark artwork
   function orca(size) {
     const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     s.setAttribute('width', size); s.setAttribute('height', size); s.setAttribute('viewBox', '0 0 24 24');
@@ -38,37 +42,40 @@
 
   // ----- top bar -----
   const nav = document.getElementById('nav');
-  nav.className = 'navbar' + (role === 'student' ? '' : ' staff');
+  if (nav) {
+    nav.className = 'navbar' + (role === 'student' ? '' : ' staff');
 
-  const back = h('button', { type: 'button', 'aria-label': 'Go back', onclick: () => history.back() }, icon('arrow-left', 17));
-  const fwd  = h('button', { type: 'button', 'aria-label': 'Go forward', onclick: () => history.forward() }, icon('arrow-right', 17));
-  if (history.length <= 1) back.disabled = true;
+    const back = h('button', { type: 'button', 'aria-label': 'Go back', onclick: () => history.back() }, icon('arrow-left', 17));
+    const fwd  = h('button', { type: 'button', 'aria-label': 'Go forward', onclick: () => history.forward() }, icon('arrow-right', 17));
+    if (history.length <= 1) back.disabled = true;
 
-  const links = items.map(i => h('a', { href: i.href, class: path === i.href ? 'active' : '', 'data-href': i.href, text: i.label }));
-  const mobileLinks = items.map(i => h('a', { href: i.href, class: path === i.href ? 'active' : '', 'data-href': i.href, text: i.label }));
-  const mobile = h('div', { class: 'mobile-menu' }, mobileLinks, h('a', { href: '/logout', class: 'danger', text: 'Sign out' }));
-  const toggle = h('button', { type: 'button', class: 'menu-toggle', 'aria-label': 'Menu', 'aria-expanded': 'false',
-    onclick: () => { const o = mobile.classList.toggle('open'); toggle.setAttribute('aria-expanded', o); } }, icon('menu', 18, 2));
+    const links = items.map(i => h('a', { href: i.href, class: path === i.href ? 'active' : '', 'data-href': i.href, text: i.label }));
+    const mobileLinks = items.map(i => h('a', { href: i.href, class: path === i.href ? 'active' : '', 'data-href': i.href, text: i.label }));
+    const mobile = h('div', { class: 'mobile-menu' }, mobileLinks, h('a', { href: '/logout', class: 'danger', text: 'Sign out' }));
+    const toggle = h('button', { type: 'button', class: 'menu-toggle', 'aria-label': 'Menu', 'aria-expanded': 'false',
+      onclick: () => { const o = mobile.classList.toggle('open'); toggle.setAttribute('aria-expanded', o); } }, icon('menu', 18, 2));
 
-  nav.append(
-    h('div', { class: 'nav-inner' },
-      h('div', { class: 'hist' }, back, fwd),
-      h('a', { class: 'brand', href: items.length ? items[0].href : '/' },
-        h('div', { class: 'brand-mark' }, orca(22)),
-        h('div', {},
-          h('div', { class: 'brand-name font-display', text: 'SIIT Rental Service' }),
-          role === 'student' ? h('div', { class: 'brand-sub', text: 'Library Equipment Rentals · Rangsit & Bangkadi' }) : null)),
-      role !== 'student' ? h('span', { class: 'role-tag font-display', text: role.toUpperCase() }) : null,
-      h('div', { class: 'nav-links' }, links),
-      h('div', { class: 'nav-right' },
-        h('a', { class: 'btn-signout', href: '/logout' }, icon('log-out', 14), 'Sign out'),
-        toggle)),
-    mobile);
+    nav.append(
+      h('div', { class: 'nav-inner' },
+        h('div', { class: 'hist' }, back, fwd),
+        h('a', { class: 'brand', href: items.length ? items[0].href : '/' },
+          h('div', { class: 'brand-mark' }, orca(22)),
+          h('div', {},
+            h('div', { class: 'brand-name font-display', text: 'SIIT Rental Service' }),
+            role === 'student' ? h('div', { class: 'brand-sub', text: 'Library Equipment Rentals · Rangsit & Bangkadi' }) : null)),
+        role !== 'student' ? h('span', { class: 'role-tag font-display', text: role.toUpperCase() }) : null,
+        h('div', { class: 'nav-links' }, links),
+        h('div', { class: 'nav-right' },
+          h('a', { class: 'btn-signout', href: '/logout' }, icon('log-out', 14), 'Sign out'),
+          toggle)),
+      mobile);
+  }
 
-  // ----- badges (real numbers from the API) -----
+  // ----- badges (real numbers from API) -----
   function badgeEl(count, danger) {
     return h('span', { class: 'pill n-badge ' + (danger ? 'red' : 'violet'), style: 'margin-left:6px;padding:1px 6px;font-size:10px', text: String(count) });
   }
+
   function showBadge(href, count, danger) {
     document.querySelectorAll('[data-href="' + href + '"]').forEach(a => {
       a.querySelector('.n-badge')?.remove();
@@ -76,25 +83,37 @@
     });
   }
 
-  if (role === 'student') {
-    fetch('/student/api/Mytransaction').then(r => r.ok ? r.json() : []).then(rows => {
-      showBadge('/student/my_rental', rows.filter(r => r.status === 'overdue').length, true);
-    }).catch(() => {});
-  }
-  if (role === 'staff') {
-    const update = async () => {
-      try {
-        const res = await fetch('/staff/api/return-desk/count');
-        if (!res.ok) return;
-        const { count } = await res.json();
-        showBadge('/staff/return_desk', count, false);
-      } catch { /* ignore network errors */ }
-    };
-    update();
-    setInterval(update, 30000);
-  }
+  const updateBadges = async () => {
+    try {
+      if (role === 'student') {
+        const [txRes, notifRes] = await Promise.all([
+          fetch('/student/api/Mytransaction').catch(() => null),
+          fetch('/student/api/notifications/count').catch(() => null)
+        ]);
 
-  // ----- footer (student pages that have <footer id="footer">) -----
+        if (txRes && txRes.ok) {
+          const rows = await txRes.json();
+          showBadge('/student/my_rental', rows.filter(r => r.status === 'overdue').length, true);
+        }
+        if (notifRes && notifRes.ok) {
+          const { count } = await notifRes.json();
+          showBadge('/student/notifications', count, false);
+        }
+      } else if (role === 'staff') {
+        const res = await fetch('/staff/api/return-desk/count').catch(() => null);
+        if (res && res.ok) {
+          const { count } = await res.json();
+          showBadge('/staff/return_desk', count, false);
+        }
+      }
+    } catch { /* ignore network errors */ }
+  };
+
+  window.refreshBadge = updateBadges;
+  updateBadges();
+  setInterval(updateBadges, 30000);
+
+  // ----- footer (pages with <footer id="footer">) -----
   const foot = document.getElementById('footer');
   if (foot) {
     foot.className = 'site-footer';
