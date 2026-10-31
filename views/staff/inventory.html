@@ -1,24 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inventory · SIIT Rental Service</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css">
+</head>
 <body data-role="staff">
 <nav id="nav"></nav>
 
-<p style="line-height: 1.6;">---LIBRARY COUNTER - RANGSIT & BANGKADI</p>
-<h2>COUNTER DESK</h2>
-<p style="line-height: 1.6;">Check returns, approve requests and keep the inventory accurate.</p>
+<header class="page-header">
+  <div>
+    <div class="eyebrow font-display">Library staff · Rangsit &amp; Bangkadi</div>
+    <h1 class="font-display">Inventory</h1>
+    <p>Search the equipment list, mark items borrowed or available, and add or remove equipment.</p>
+  </div>
+</header>
 
-<form id="searchForm">
-  <input id="search" type="search" placeholder="Search by equipment or category name" size="40">
-  <button type="submit">Search</button>
+<div class="page-body narrow">
+<form id="searchForm" class="filter-row">
+  <input id="search" type="search" class="input" style="max-width: 420px" placeholder="Search by equipment or category name">
+  <button type="submit" class="btn btn-dark">Search</button>
 </form>
 
 <div id="categories"></div>
 <div class="filter-row">
   <div id="location"></div>
-  <button type="button" id="addBtn" class="add-btn">+ Add equipment</button>
+  <button type="button" id="addBtn" class="add-btn" style="margin-left: auto; margin-bottom: 10px;">+ Add equipment</button>
 </div>
 
-<p id="message"></p>
-<table id="equip" border="1"></table>
+<p id="message" class="note-line"></p>
+<div class="table-wrap"><table id="equip"></table></div>
+</div>
 
 <!-- Add equipment pop-up -->
 <dialog id="addDialog">
@@ -51,12 +67,14 @@
 
     <p id="addError" class="dlg-error" role="alert" hidden></p>
     <div class="dlg-actions">
-      <button type="button" id="addCancel">Cancel</button>
-      <button type="submit" id="addConfirm">Save item</button>
+      <button type="button" class="btn btn-outline" id="addCancel">Cancel</button>
+      <button type="submit" class="btn btn-dark" id="addConfirm">Save item</button>
     </div>
   </form>
 </dialog>
 
+<script src="/icons.js"></script>
+<script src="/ui.js"></script>
 <script src="/nav.js"></script>
 <script>
 const searchBox = document.getElementById('search');
@@ -67,9 +85,11 @@ let selectedCategory = null;   // null = all categories
 let selectedLocation = null;   // null = both campuses
 let latestCall = 0;
 
-function makeButton(label, onClick) {
+function makeButton(label, onClick, cls) {
   const btn = document.createElement('button');
   btn.textContent = label;
+  btn.className = cls || 'btn btn-outline';
+  btn.style.marginRight = '6px';
   btn.addEventListener('click', onClick);
   return btn;
 }
@@ -194,7 +214,7 @@ async function load() {
     if (r.desk_loans > 0)                          // something lent at the desk: can put it back
       actions.appendChild(makeButton('Mark available', () => markEquipment(r, 'available')));
     const actions2 = tr.insertCell();
-    const del = makeButton('X', () => deleteEquipment(r));
+    const del = makeButton('X', () => deleteEquipment(r), 'btn btn-danger');
     del.title = 'Delete equipment';
     actions2.appendChild(del);
   });
@@ -269,3 +289,5 @@ load();
 loadCategories();
 loadLocation();
 </script>
+</body>
+</html>
