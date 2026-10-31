@@ -44,6 +44,30 @@ exports.decideRequest = async (req, res) => {
   }
 };
 
+exports.addEquipmentPage = (req, res) => res.sendFile(view('add_equipment'));
+
+exports.getCategories = async (req, res) => {
+  const [rows] = await db.query('SELECT category_id, category_name FROM category ORDER BY category_name');
+  res.json(rows);
+};
+
+exports.addEquipment = async (req, res) => {
+  const { name, description, condition_note } = req.body;
+  const categoryId = Number(req.body.category_id);
+  const qty = Number(req.body.total_quantity);
+  if (!name || !name.trim() || !Number.isInteger(categoryId) || !Number.isInteger(qty) || qty < 1) {
+    return res.status(400).json({ error: 'Invalid equipment data' });
+  }
+  try {
+    await db.query('CALL sp_add_equipment(?,?,?,?,?,?)',
+      [req.session.user.id, name.trim(), categoryId, description || null, qty, condition_note || null]);
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.sqlState === '45000') return res.status(400).json({ error: err.sqlMessage });
+    if (err.code === 'ER_NO_REFERENCED_ROW_2') return res.status(400).json({ error: 'Unknown category' });
+    throw err;
+  }
+};
 const returnDeskPageFile = view('return_desk');
 exports.returnDeskPage = (req, res) => res.sendFile(returnDeskPageFile);
 

@@ -30,4 +30,8 @@ router.delete('/api/equipment/:id', requireRole('staff'), wrap(ctrl.deleteEquipm
 router.get('/api/overdue', requireRole('staff'), wrap(ctrl.getOverdue));
 router.post('/api/overdue/:id/notify', requireRole('staff'), wrap(ctrl.notifyOverdue));
 
+router.get('/equipment/new', requireRole('staff'), ctrl.addEquipmentPage);
+router.get('/api/categories', wrap(ctrl.getCategories));
+router.post('/api/equipment', requireRole('staff'), wrap(ctrl.addEquipment));
+
 module.exports = router;
