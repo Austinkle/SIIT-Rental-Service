@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Return Desk · SIIT Rental Service</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body data-role="staff">
+<nav id="nav"></nav>
+
+<header class="page-header">
+  <div>
+    <div class="eyebrow font-display">Library staff · Rangsit &amp; Bangkadi</div>
+    <h1 class="font-display">Counter desk</h1>
+    <p>Check returns, approve requests and keep the inventory accurate.</p>
+  </div>
+</header>
+
+<div class="page-body narrow">
+  <div class="tabs" role="navigation" aria-label="Staff sections">
+    <a href="/staff/return_desk" class="active" aria-current="page"><span data-icon="clipboard-check"></span> Return Desk <span class="n" id="deskCount">0</span></a>
+    <a href="/staff/requests"><span data-icon="inbox"></span> Requests <span class="n" id="reqCount">0</span></a>
+  </div>
+
+  <h2 class="sec-title"><span class="t font-display">Return Desk</span></h2>
+  <p class="note-line">Returned items waiting for a check.</p>
+  <div class="stack" id="desk"></div>
+</div>
+
+<!-- Flag damage pop-up -->
+<dialog id="flagDialog">
+  <form id="flagForm">
+    <h3 class="font-display">Flag damage</h3>
+    <p><strong id="flagItem"></strong></p>
+    <label>Penalty amount (THB)
+      <input type="number" id="flagAmount" min="0.01" max="100000" step="0.01" required>
+    </label>
+    <label>Reason
+      <input type="text" id="flagReason" maxlength="100" required>
+    </label>
+    <p id="flagError" class="dlg-error" role="alert" hidden></p>
+    <div class="dlg-actions">
+      <button type="button" class="btn btn-outline" id="flagCancel">Cancel</button>
+      <button type="submit" class="btn btn-danger" id="flagConfirm">Flag damage</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="/icons.js"></script>
+<script src="/ui.js"></script>
+<script src="/nav.js"></script>
+<script>
+const { h, icon, fmtDate, fmtDateTime } = UI;
+document.querySelectorAll('[data-icon]').forEach(el => el.replaceWith(icon(el.dataset.icon, 15)));
+
+const desk = document.getElementById('desk');
+const dateBox = (label, value, kind) => h('div', { class: 'info ' + (kind || '') }, h('div', { class: 'k', text: label }), h('div', { class: 'v', text: value }));
+
+// POST helper: shows the server's error message, then refreshes the list
+async function post(url, body) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body || {})
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) UI.toast(data.error || 'Something went wrong', 'error');
+  loadDesk();
+  return { ok: res.ok, error: data.error };
+}
+
+const makeButton = (cls, label, onClick, iconName) =>
+  h('button', { type: 'button', class: 'btn ' + cls, onclick: onClick }, iconName ? icon(iconName, 14) : null, label);
+
+// the buttons depend on the state of the order
+function actions(r) {
+  const box = h('div', { class: 'actions' });
+  const closeBtn = () => makeButton('btn-dark', 'Accept and close order', () => {
+    if (confirm('Close this order? The item goes back on the shelf.')) {
+      post('/staff/api/return-desk/' + r.transaction_id + '/close');
+    }
+  }, 'check');
+
+  if (!r.flag_damage) {                                     // nothing flagged yet
+    box.append(closeBtn(), makeButton('btn-danger', 'Flag damage', () => openFlagDialog(r)));
+  } else if (r.paid_status === 'unpaid') {                  // flagged, waiting for payment
+    box.append(makeButton('btn-primary', 'Mark penalty paid', () => {
+      if (confirm('Confirm that ' + r.amount + ' THB was received?')) {
+        post('/staff/api/penalties/' + r.penalty_id + '/paid');
+      }
+    }));
+  } else {                                                  // flagged and paid
+    box.append(closeBtn());
+  }
+  return box;
+}
+
+function card(r) {
+  const late = new Date(r.return_date) > new Date(r.due_date);
+  const flagged = !!r.flag_damage;
+  return h('div', { class: 'row-card' + (flagged || late ? ' warn' : '') },
+    h('div', { class: 'row-top' },
+      h('div', {},
+        h('div', { class: 'row-title font-display', text: r.equipment }),
+        h('div', { class: 'row-sub', text: r.student + ' · ' + r.location + ' · #' + r.transaction_id })),
+      h('div', { style: 'display:flex;gap:6px;flex-wrap:wrap' },
+        late ? h('span', { class: 'pill red', text: 'Late' }) : null,
+        flagged ? h('span', { class: 'pill red', text: r.amount + ' THB (' + r.paid_status + ')' }) : null)),
+    h('div', { class: 'info-grid' },
+      dateBox('Borrowed', fmtDate(r.borrow_date)),
+      dateBox('Due', fmtDate(r.due_date)),
+      dateBox('Returned', fmtDateTime(r.return_date), late ? 'red' : ''),
+      dateBox('Condition at borrow', r.condition_at_borrow || '-'),
+      dateBox('Condition at return', r.condition_at_return || '-')),
+    actions(r));
+}
+
+async function loadDesk() {
+  const res = await fetch('/staff/api/return-desk');
+  desk.innerHTML = '';
+  if (!res.ok) { desk.append(h('div', { class: 'empty', text: 'Could not load data' })); return; }
+  const rows = await res.json();
+  document.getElementById('deskCount').textContent = rows.length;
+  if (rows.length === 0) {
+    desk.append(h('div', { class: 'empty' }, h('div', { class: 't font-display', text: 'Desk is clear' }), 'No returned items are waiting.'));
+    return;
+  }
+  rows.forEach(r => desk.append(card(r)));
+}
+
+// ----- flag damage pop-up -----
+const flagDialog = document.getElementById('flagDialog');
+const flagForm = document.getElementById('flagForm');
+const flagError = document.getElementById('flagError');
+const flagConfirm = document.getElementById('flagConfirm');
+let flagging = null;
+
+function openFlagDialog(r) {
+  flagging = r;
+  flagForm.reset();
+  flagError.hidden = true;
+  document.getElementById('flagItem').textContent = r.equipment + ' - ' + r.student;
+  document.getElementById('flagReason').value = (r.condition_at_return || '').slice(0, 100);
+  flagDialog.showModal();
+}
+
+document.getElementById('flagCancel').addEventListener('click', () => flagDialog.close());
+
+flagForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  flagError.hidden = true;
+  flagConfirm.disabled = true;
+
+  const res = await fetch('/staff/api/return-desk/' + flagging.transaction_id + '/flag', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      amount: document.getElementById('flagAmount').value,
+      reason: document.getElementById('flagReason').value
+    })
+  });
+  const data = await res.json().catch(() => ({}));
+  flagConfirm.disabled = false;
+
+  if (res.ok) {
+    flagDialog.close();
+    loadDesk();
+    return;
+  }
+  flagError.textContent = data.error || 'Could not flag this order';
+  flagError.hidden = false;
+});
+
+// number on the "Requests" tab
+fetch('/staff/api/pending-requests').then(r => r.ok ? r.json() : null)
+  .then(d => { if (d) document.getElementById('reqCount').textContent = d.length; }).catch(() => {});
+
+// ----- start -----
+loadDesk();
+setInterval(loadDesk, 30000);   // pick up new returns without a page refresh
+</script>
+</body>
+</html>

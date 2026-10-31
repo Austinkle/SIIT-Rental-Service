@@ -1,113 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home · SIIT Rental Service</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css">
+</head>
 <body data-role="student">
 <nav id="nav"></nav>
 
-<p style="line-height: 1.6;">
-  BORROW IT.<br>
-  USE IT.<br>
-  BRING IT BACK.
-</p>
-<h2>SEARCH</h2>
-<form id="searchForm">
-  <input id="search" type="search" placeholder="Search by equipment or category name" size="40">
-  <button type="submit">Search</button>
-</form>
-<div id="categories"></div>
-<p id="message"></p>
-<table id="equip" border="1"></table>
+<section class="hero">
+  <div class="hero-grid">
+    <div style="min-width:0">
+      <div class="eyebrow font-display">Library Counter · Rangsit &amp; Bangkadi</div>
+      <h1 class="font-display">Borrow it.<br><span>Use it.</span><br>Bring it back.</h1>
+      <p class="lead">Calculators, chargers, adapters and umbrellas, free to borrow with your student ID.</p>
+      <form id="searchForm" class="hero-search" action="/student/rental_catalog" method="get" role="search">
+        <input id="search" name="q" type="search" placeholder="Search by equipment or category name" aria-label="Search equipment">
+        <button type="submit">Search</button>
+      </form>
+    </div>
+    <dl class="hero-stats" id="stats"></dl>
+  </div>
+</section>
 
+<section class="section">
+  <div class="section-head">
+    <h2 class="h-display font-display">Browse by Category</h2>
+    <a class="link-btn" href="/student/rental_catalog">View all <span data-icon="arrow-right"></span></a>
+  </div>
+  <div class="cat-grid" id="categories"></div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <div>
+      <h2 class="h-display font-display">Available Equipment</h2>
+      <p class="h-sub">SIIT equipment ready to borrow, free with your student ID</p>
+    </div>
+    <a class="link-btn" href="/student/rental_catalog">View all <span data-icon="arrow-right"></span></a>
+  </div>
+  <p id="message" class="h-sub"></p>
+  <div class="item-grid wide" id="featured"></div>
+</section>
+
+<footer id="footer"></footer>
+
+<script src="/icons.js"></script>
+<script src="/ui.js"></script>
 <script src="/nav.js"></script>
+<script src="/request-dialog.js"></script>
 <script>
-const searchBox = document.getElementById('search');
-const table = document.getElementById('equip');
-const message = document.getElementById('message');
+const { h, icon } = UI;
+document.querySelectorAll('[data-icon]').forEach(el => el.replaceWith(icon(el.dataset.icon, 14)));
 
-let selectedCategory = null;   // null = all categories
-let latestCall = 0;
+// ----- hero numbers + featured items (one call to the equipment API) -----
+async function loadEquipment() {
+  const res = await fetch('/student/api/equipment');
+  const message = document.getElementById('message');
+  if (!res.ok) { message.textContent = 'Could not load equipment'; return; }
+  const rows = await res.json();
 
-// ----- category buttons -----
+  const total = rows.reduce((n, r) => n + r.total_quantity, 0);
+  const free  = rows.reduce((n, r) => n + r.available_quantity, 0);
+  const stats = document.getElementById('stats');
+  [['Items available', free], ['On loan now', total - free], ['Equipment types', rows.length]].forEach(([label, v]) => {
+    stats.append(h('div', {}, h('dd', { text: String(v) }), h('dt', { text: label })));
+  });
+
+  const open = rows.filter(r => r.available_quantity > 0).slice(0, 4);
+  message.textContent = open.length === 0 ? 'Nothing is available right now' : '';
+  const box = document.getElementById('featured');
+  open.forEach(r => box.append(UI.itemCard(r, openRequestDialog)));
+}
+
+// ----- category tiles -> catalog filtered by that category -----
 async function loadCategories() {
   const res = await fetch('/student/api/categories');
   if (!res.ok) return;
   const cats = await res.json();
-
   const box = document.getElementById('categories');
-  box.innerHTML = '';
-  addCategoryButton(box, 'All', null);
-  cats.forEach(c => addCategoryButton(box, c.category_name, c.category_id));
-}
-
-function addCategoryButton(box, label, id) {
-  const btn = document.createElement('button');
-  btn.textContent = label;
-  btn.className = 'cat-btn' + (id === selectedCategory ? ' active' : '');
-
-  btn.addEventListener('click', () => {
-    selectedCategory = id;                                  // remember which category
-    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');                            // highlight this one
-    load();                                                 // reload the list
-  });
-
-  box.appendChild(btn);
-}
-
-// ----- equipment list -----
-async function load() {
-  const thisCall = ++latestCall;
-
-  let url = '/student/api/equipment?q=' + encodeURIComponent(searchBox.value);
-  if (selectedCategory !== null) url += '&category=' + selectedCategory;
-
-  const res = await fetch(url);
-  if (thisCall !== latestCall) return;
-
-  table.innerHTML = '';
-  if (!res.ok) { message.textContent = 'Could not load equipment'; return; }
-
-  const rows = await res.json();
-  message.textContent = rows.length === 0 ? 'No equipment found' : '';
-  if (rows.length === 0) return;
-
-  const head = table.createTHead().insertRow();
-  ['Name', 'Category', 'Available', 'Status',''].forEach(t => {
-    const th = document.createElement('th');
-    th.textContent = t;
-    head.appendChild(th);
-  });
-
-  const body = table.createTBody();
-  rows.forEach(r => {
-    const tr = body.insertRow();
-    tr.insertCell().textContent = r.name;
-    tr.insertCell().textContent = r.category_name;
-    tr.insertCell().textContent = r.available_quantity;
-    tr.insertCell().textContent = r.status;
-    if(r.available_quantity != 0){
-      const btn = document.createElement('button');
-    btn.textContent = 'Request Rental';
-    btn.addEventListener('click', () => requestItem(r.equipment_id));
-    tr.insertCell().appendChild(btn);
-    }
+  cats.forEach(c => {
+    box.append(h('a', { class: 'cat-tile', href: '/student/rental_catalog?category=' + c.category_id },
+      h('span', { class: 'cat-icon' }, icon(UI.catMeta(c.category_name).icon, 22)),
+      h('span', { class: 't', text: c.category_name })));
   });
 }
 
-async function requestItem(id) {
-  const res = await fetch('/student/api/requests', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ equipment_id: id })
-  });
-  alert(res.ok ? 'Request sent' : 'Could not send request');
-}
-
-// ----- search form -----
-document.getElementById('searchForm').addEventListener('submit', event => {
-  event.preventDefault();
-  load();
-});
-
-// ----- start -----
-load();
+loadEquipment();
 loadCategories();
 </script>
+</body>
+</html>

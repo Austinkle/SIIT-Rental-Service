@@ -1,0 +1,51 @@
+html, body { margin: 0; height: 100%; overflow: hidden; }
+body {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(60,20,130,.55) 0%, rgba(60,20,130,0) 50%),
+    linear-gradient(165deg, #6a0fb8 0%, #8a2be2 52%, #b46cf7 100%);
+}
+body::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, rgba(255,255,255,.22) 0%, rgba(255,255,255,0) 42%); }
+svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.tb { transform-box: fill-box; transform-origin: center; }
+.spin { animation: spin var(--dur, 30s) linear infinite; }
+.spin.ccw { animation-direction: reverse; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* เฟืองพื้นหลัง: สีอ่อนมาก โผล่ตามหลังโลโก้ */
+#bg { transform-origin: 50% 50%; animation: push 5s cubic-bezier(.2,.7,.2,1) 2.2s both; }
+@keyframes push { from { transform: scale(1.15); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.bgear { fill: rgba(255,255,255,.09); stroke: rgba(255,255,255,.2); stroke-width: 1.5; stroke-linejoin: round; }
+
+/* ลำดับโลโก้กลาง */
+#gearIn { animation: gearIn 1.6s cubic-bezier(.25,.8,.3,1) both; }
+@keyframes gearIn {
+  0% { transform: scale(.2) rotate(-180deg); opacity: 0; }
+  55% { transform: scale(1.12) rotate(-30deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+#hole { animation: hole .8s ease-out 1.2s both; }
+@keyframes hole { from { transform: scale(0); } to { transform: scale(1); } }
+#ring { animation: ring 1.1s cubic-bezier(.25,.8,.3,1) 1.5s both; }
+@keyframes ring { from { transform: scale(.6) rotate(-90deg); opacity: 0; } to { transform: none; opacity: 1; } }
+
+#logo { animation: float 6s ease-in-out 3s infinite alternate; filter: drop-shadow(0 14px 28px rgba(40,5,100,.35)); }
+@keyframes float { from { transform: translateY(-5px); } to { transform: translateY(6px); } }
+text { font-family: 'Poppins', 'Inter', Tahoma, sans-serif; font-weight: 800; }
+.ch { fill: #fff; opacity: .95; font-size: 25px; text-anchor: middle; }
+.ch.dot { fill: #ff8be0; }
+.sub { font-family: 'Quicksand', 'Nunito', Tahoma, sans-serif; font-weight: 700; fill: #fff; font-size: 19px; letter-spacing: 8px; text-anchor: middle; opacity: .9; animation: fade 1s ease-out 2.6s both; }
+@keyframes fade { from { opacity: 0; } to { opacity: .9; } }
+
+.dust { animation: drift var(--t) ease-in-out infinite alternate, tw 3s ease-in-out infinite alternate; }
+@keyframes drift { from { transform: translate(0,0); } to { transform: translate(var(--dx), var(--dy)); } }
+@keyframes tw { from { opacity: .1; } to { opacity: .6; } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+
+/* น้องวาฬ: ว่ายเข้ามาจากซ้าย แล้วลอยขึ้นลงเบาๆ */
+#orcaIn { animation: orcaIn 1.8s cubic-bezier(.2,.8,.25,1) 2.6s both; filter: drop-shadow(0 6px 8px rgba(40,5,100,.4)); }
+@keyframes orcaIn { from { transform: translate(-480px, 60px) rotate(-14deg); opacity: 0; } 60% { opacity: 1; } to { transform: none; opacity: 1; } }
+#orcaBob { animation: bob 4s ease-in-out 4.4s infinite alternate; }
+@keyframes bob { from { transform: translateY(-6px) rotate(-2deg); } to { transform: translateY(7px) rotate(2deg); } }
+#orcaDisc { animation: discIn .8s ease-out 2.9s both; }
+@keyframes discIn { from { opacity: 0; } to { opacity: 1; } }

@@ -1,54 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Requests · SIIT Rental Service</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css">
+</head>
 <body data-role="staff">
 <nav id="nav"></nav>
 
-<h1>Staff page</h1>
-<h2>Pending requests</h2>
-<p id="message"></p>
-<table id="pending" border="1"></table>
+<header class="page-header">
+  <div>
+    <div class="eyebrow font-display">Library staff · Rangsit &amp; Bangkadi</div>
+    <h1 class="font-display">Counter desk</h1>
+    <p>Check returns, approve requests and keep the inventory accurate.</p>
+  </div>
+</header>
 
+<div class="page-body narrow">
+  <div class="tabs" role="navigation" aria-label="Staff sections">
+    <a href="/staff/return_desk"><span data-icon="clipboard-check"></span> Return Desk <span class="n" id="deskCount">0</span></a>
+    <a href="/staff/requests" class="active" aria-current="page"><span data-icon="inbox"></span> Requests <span class="n" id="reqCount">0</span></a>
+  </div>
+
+  <h2 class="sec-title"><span class="t font-display">Pending requests</span></h2>
+  <p id="message" class="note-line"></p>
+  <div class="stack" id="pending"></div>
+</div>
+
+<script src="/icons.js"></script>
+<script src="/ui.js"></script>
 <script src="/nav.js"></script>
 <script>
-const table = document.getElementById('pending');
+const { h, icon, fmtDate, fmtDateTime } = UI;
+document.querySelectorAll('[data-icon]').forEach(el => el.replaceWith(icon(el.dataset.icon, 15)));
+
+const list = document.getElementById('pending');
 const message = document.getElementById('message');
+
+const dateBox = (label, value) => h('div', { class: 'info' }, h('div', { class: 'k', text: label }), h('div', { class: 'v', text: value }));
 
 async function load() {
   const res = await fetch('/staff/api/pending-requests');
-  table.innerHTML = '';
+  list.innerHTML = '';
   if (!res.ok) { message.textContent = 'Could not load requests'; return; }
 
   const rows = await res.json();
-  message.textContent = rows.length === 0 ? 'No pending requests' : '';
-  if (rows.length === 0) return;
+  document.getElementById('reqCount').textContent = rows.length;
+  message.textContent = '';
+  if (rows.length === 0) {
+    list.append(h('div', { class: 'empty' }, h('div', { class: 't font-display', text: 'All clear' }), 'No pending requests.'));
+    return;
+  }
 
-  const head = table.createTHead().insertRow();
-  ['Student', 'Equipment', 'Requested on', ''].forEach(t => {
-    const th = document.createElement('th');
-    th.textContent = t;
-    head.appendChild(th);
-  });
-
-  const body = table.createTBody();
   rows.forEach(r => {
-    const tr = body.insertRow();
-    tr.insertCell().textContent = r.student;
-    tr.insertCell().textContent = r.equipment;
-    tr.insertCell().textContent = new Date(r.request_date).toLocaleString();
-
-    const actions = tr.insertCell();
-    actions.appendChild(makeButton('Accept', () => decide(r.request_id, 'approve')));
-    actions.appendChild(makeButton('Reject', () => decide(r.request_id, 'reject')));
+    list.append(h('div', { class: 'row-card' },
+      h('div', { class: 'row-top' },
+        h('div', {},
+          h('div', { class: 'row-title font-display', text: r.equipment }),
+          h('div', { class: 'row-sub', text: r.student + ' · ' + r.location + ' · requested ' + fmtDateTime(r.request_date) }))),
+      h('div', { class: 'info-grid' },
+        dateBox('Borrow date', fmtDate(r.borrow_date)),
+        dateBox('Due date', fmtDate(r.due_date))),
+      h('div', { class: 'actions' },
+        h('button', { type: 'button', class: 'btn btn-dark', onclick: ev => decide(ev.currentTarget, r.request_id, 'approve') }, icon('check', 14), 'Approve'),
+        h('button', { type: 'button', class: 'btn btn-danger', onclick: ev => decide(ev.currentTarget, r.request_id, 'reject') }, icon('x', 14), 'Reject'))));
   });
 }
 
-function makeButton(label, onClick) {
-  const btn = document.createElement('button');
-  btn.textContent = label;
-  btn.addEventListener('click', onClick);
-  return btn;
-}
-
-async function decide(id, action) {
+async function decide(btn, id, action) {
+  btn.disabled = true;
   const res = await fetch('/staff/api/requests/' + id + '/decision', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -56,10 +80,18 @@ async function decide(id, action) {
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    alert(data.error || 'Something went wrong');
+    UI.toast(data.error || 'Something went wrong', 'error');
+  } else {
+    UI.toast(action === 'approve' ? 'Request approved.' : 'Request rejected.');
   }
   load();   // refresh the list either way
 }
 
+// number on the "Return Desk" tab
+fetch('/staff/api/return-desk/count').then(r => r.ok ? r.json() : null)
+  .then(d => { if (d) document.getElementById('deskCount').textContent = d.count; }).catch(() => {});
+
 load();
 </script>
+</body>
+</html>

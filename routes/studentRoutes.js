@@ -12,12 +12,19 @@ router.get('/home', ctrl.homePage);
 router.get('/', ctrl.homePage);
 router.get('/rental_catalog',  ctrl.rental_catalog_Page);
 router.get('/my_rental',  ctrl.my_rental_Page);
-
+router.get('/notifications', ctrl.notificationsPage);
 
 // data
 router.get('/api/equipment',  wrap(ctrl.getEquipment));
-router.get('/api/requests',   wrap(ctrl.getMyRequests));
+router.get('/api/Myrequests',   wrap(ctrl.getMyRequests));
 router.post('/api/requests',  wrap(ctrl.createRequest));
 router.get('/api/categories', wrap(ctrl.getCategories));
+router.get('/api/location', wrap(ctrl.getLocation));
+router.get('/api/Mytransaction', wrap(ctrl.getMyTransaction));
+router.post('/api/Mytransaction/:id/return', wrap(ctrl.returnTransaction));
+router.get('/api/notifications', wrap(ctrl.getNotifications));
+router.get('/api/notifications/count', wrap(ctrl.getNotificationCount));
+router.post('/api/notifications/read-all', wrap(ctrl.markAllNotificationsRead));
+router.post('/api/notifications/:id/read', wrap(ctrl.markNotificationRead));
 
 module.exports = router;

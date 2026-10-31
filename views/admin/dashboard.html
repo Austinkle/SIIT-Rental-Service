@@ -1,11 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin · SIIT Rental Service</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css">
+</head>
 <body data-role="admin">
 <nav id="nav"></nav>
 
-<h1>Admin page</h1>
-<h2>All users</h2>
-<table id="users" border="1"></table>
+<header class="page-header">
+  <div>
+    <div class="eyebrow font-display">Administration</div>
+    <h1 class="font-display">Admin page</h1>
+    <p>All registered users of the SIIT Rental Service.</p>
+  </div>
+</header>
 
+<div class="page-body narrow">
+  <h2 class="sec-title"><span class="t font-display">All users</span></h2>
+  <div class="table-wrap"><table id="users"></table></div>
+</div>
+
+<script src="/icons.js"></script>
+<script src="/ui.js"></script>
 <script src="/nav.js"></script>
 <script src="/shared.js"></script>
 <script>
@@ -17,3 +38,5 @@
     { key: 'user_type',  label: 'Role' }
   ]);
 </script>
+</body>
+</html>

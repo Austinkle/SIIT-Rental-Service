@@ -1,16 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Rentals · SIIT Rental Service</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css">
+</head>
 <body data-role="student">
 <nav id="nav"></nav>
 
-<h1>My requests</h1>
-<table id="requests" border="1"></table>
+<header class="page-header">
+  <div>
+    <div class="eyebrow font-display">Library Counter · Rangsit &amp; Bangkadi</div>
+    <h1 class="font-display">My Rentals</h1>
+    <p>Currently borrowed items and rental history.</p>
+  </div>
+</header>
 
+<div class="page-body reading">
+  <section class="sec-block">
+    <div class="sec-title"><span class="t font-display">Currently Borrowed</span><span class="pill red" id="activeCount">0 items</span></div>
+    <div class="stack" id="transaction"></div>
+  </section>
+
+  <section class="sec-block">
+    <div class="sec-title"><span class="t font-display">Rental History</span><span class="pill green" id="historyCount">0 items</span></div>
+    <div class="stack" id="history"></div>
+  </section>
+
+  <section class="sec-block">
+    <div class="sec-title"><span class="t font-display">My Requests</span><span class="pill violet" id="requestCount">0 requests</span></div>
+    <div class="stack" id="requests"></div>
+  </section>
+
+  <div style="text-align:center">
+    <a class="btn btn-dark" href="/student/rental_catalog" style="padding:10px 24px;font-size:14px">Browse Available Equipment <span data-icon="arrow-right"></span></a>
+  </div>
+</div>
+
+<!-- Return pop-up -->
+<dialog id="returnDialog">
+  <form id="returnForm">
+    <h3 class="font-display">Return item</h3>
+    <p><strong id="retItem"></strong></p>
+
+    <fieldset>
+      <legend>Condition of the item</legend>
+      <label><input type="radio" name="condition" value="Good" required> Good</label>
+      <label><input type="radio" name="condition" value="Minor Wear"> Minor Wear</label>
+      <label><input type="radio" name="condition" value="Damage"> Damage</label>
+    </fieldset>
+
+    <label>Details (required for Damage)
+      <textarea id="retNote" maxlength="80" rows="3" placeholder="e.g. small scratch on the back"></textarea>
+    </label>
+
+    <p id="retError" class="dlg-error" role="alert" hidden></p>
+    <div class="dlg-actions">
+      <button type="button" class="btn btn-outline" id="retCancel">Cancel</button>
+      <button type="submit" class="btn btn-dark" id="retConfirm">Confirm return</button>
+    </div>
+  </form>
+</dialog>
+
+<footer id="footer"></footer>
+
+<script src="/icons.js"></script>
+<script src="/ui.js"></script>
 <script src="/nav.js"></script>
-<script src="/shared.js"></script>
 <script>
-  loadTable('/student/api/requests', 'requests', [
-    { key: 'equipment',    label: 'Equipment' },
-    { key: 'request_date', label: 'Requested on' },
-    { key: 'status',       label: 'Status' }
-  ]);
+const { h, icon, fmtDate } = UI;
+document.querySelectorAll('[data-icon]').forEach(el => el.replaceWith(icon(el.dataset.icon, 15)));
+
+const plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
+const dateBox = (label, value, kind) => h('div', { class: 'info ' + (kind || '') },
+  h('div', { class: 'k', text: label }), h('div', { class: 'v', text: value }));
+
+// Helper to check if item is overdue dynamically
+function isOverdue(r) {
+  return r.status === 'overdue' || (r.status === 'borrowed' && new Date(r.due_date) < new Date());
+}
+
+// ----- status text the student sees -----
+function statusText(r) {
+  if (isOverdue(r)) return 'Overdue - please return it';
+  if (r.status === 'returned') {
+    if (r.closed)  return 'Returned - completed';
+    if (r.flagged) return 'Returned - damage reported, penalty to pay';
+    return 'Returned - waiting for staff check';
+  }
+  return r.status;
+}
+
+function activeCard(r) {
+  const late = isOverdue(r);
+  return h('div', { class: 'row-card' + (late ? ' overdue' : '') },
+    h('div', { class: 'row-top' },
+      h('div', {},
+        h('div', { class: 'row-title font-display', text: r.equipment }),
+        h('div', { class: 'row-sub' }, h('span', { class: 'mono', text: '#' + r.transaction_id }), ' · ' + r.location)),
+      UI.badge(late ? 'overdue' : 'available', late ? 'Overdue' : 'Active')),
+    h('div', { class: 'info-grid' },
+      dateBox('Borrowed', fmtDate(r.borrow_date)),
+      dateBox('Due date', fmtDate(r.due_date), late ? 'red' : '')),
+    h('div', { class: 'actions' },
+      h('button', { type: 'button', class: 'btn btn-danger', onclick: () => openReturnDialog(r), text: 'Return' })));
+}
+
+function historyCard(r) {
+  const done = r.status === 'returned' && r.closed;
+  return h('div', { class: 'row-card' + (done ? ' done' : '') },
+    h('div', { class: 'row-top' },
+      h('div', {},
+        h('div', { class: 'row-title font-display', text: r.equipment }),
+        h('div', { class: 'row-sub' }, h('span', { class: 'mono', text: '#' + r.transaction_id }), ' · ' + r.location)),
+      h('span', { class: 'pill ' + (done ? 'green' : r.flagged ? 'red' : 'amber'), text: statusText(r) })),
+    h('div', { class: 'info-grid' },
+      dateBox('Borrowed', fmtDate(r.borrow_date)),
+      dateBox('Due date', fmtDate(r.due_date))));
+}
+
+async function loadTransactions() {
+  const active = document.getElementById('transaction');
+  const history = document.getElementById('history');
+  const res = await fetch('/student/api/Mytransaction');
+  active.innerHTML = ''; history.innerHTML = '';
+  if (!res.ok) {
+    active.append(h('div', { class: 'empty', text: 'Could not load data' }));
+    return;
+  }
+  const rows = await res.json();
+  const now = rows.filter(r => r.status === 'borrowed' || r.status === 'overdue');
+  const past = rows.filter(r => !(r.status === 'borrowed' || r.status === 'overdue'));
+
+  document.getElementById('activeCount').textContent = plural(now.length, 'item', 'items');
+  document.getElementById('historyCount').textContent = plural(past.length, 'item', 'items');
+  if (now.length) now.forEach(r => active.append(activeCard(r)));
+  else active.append(h('div', { class: 'empty' }, h('div', { class: 't font-display', text: 'Nothing borrowed' }), 'Items you borrow will show up here.'));
+  if (past.length) past.forEach(r => history.append(historyCard(r)));
+  else history.append(h('div', { class: 'empty', text: 'No rental history yet' }));
+}
+
+async function loadRequests() {
+  const box = document.getElementById('requests');
+  const res = await fetch('/student/api/Myrequests');
+  box.innerHTML = '';
+  if (!res.ok) { box.append(h('div', { class: 'empty', text: 'Could not load data' })); return; }
+  const rows = await res.json();
+  document.getElementById('requestCount').textContent = plural(rows.length, 'request', 'requests');
+  if (rows.length === 0) { box.append(h('div', { class: 'empty', text: 'No requests yet' })); return; }
+  rows.forEach(r => {
+    const kind = r.status === 'approved' ? 'green' : r.status === 'rejected' ? 'red' : 'amber';
+    box.append(h('div', { class: 'row-card' + (r.status === 'rejected' ? ' overdue' : r.status === 'approved' ? ' done' : '') },
+      h('div', { class: 'row-top' },
+        h('div', {},
+          h('div', { class: 'row-title font-display', text: r.equipment }),
+          h('div', { class: 'row-sub', text: r.location + ' · requested ' + fmtDate(r.request_date) })),
+        h('span', { class: 'pill ' + kind, text: r.status.charAt(0).toUpperCase() + r.status.slice(1) })),
+      h('div', { class: 'info-grid', style: 'margin-bottom:0' },
+        dateBox('Borrow date', fmtDate(r.borrow_date)),
+        dateBox('Due date', fmtDate(r.due_date)))));
+  });
+}
+
+// ----- return pop-up -----
+const retDialog = document.getElementById('returnDialog');
+const retForm = document.getElementById('returnForm');
+const retError = document.getElementById('retError');
+const retConfirm = document.getElementById('retConfirm');
+let returning = null;                       // the rental the student clicked
+
+function openReturnDialog(r) {
+  returning = r;
+  retForm.reset();                           // clears the radio buttons and the note
+  retError.hidden = true;
+  document.getElementById('retItem').textContent = r.equipment;
+  retDialog.showModal();
+}
+
+document.getElementById('retCancel').addEventListener('click', () => retDialog.close());
+
+retForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  retError.hidden = true;
+  retConfirm.disabled = true;
+
+  try {
+    const res = await fetch('/student/api/Mytransaction/' + returning.transaction_id + '/return', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        condition: retForm.elements.condition.value,    // the chosen radio button
+        note: document.getElementById('retNote').value
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (res.ok) {
+      retDialog.close();
+      UI.toast('Return submitted. Staff will check the item at the return desk.');
+      loadTransactions();
+      return;
+    }
+    retError.textContent = data.error || 'Could not return this item';
+    retError.hidden = false;
+  } catch {
+    retError.textContent = 'Network error. Please try again.';
+    retError.hidden = false;
+  } finally {
+    retConfirm.disabled = false;
+  }
+});
+
+// ----- start -----
+loadTransactions();
+loadRequests();
 </script>
+</body>
+</html>

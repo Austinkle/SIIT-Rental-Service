@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIIT Rental Service · Gear logo reveal (purple v2)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@800&family=Quicksand:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="Intro.css">
+</head>
+<body>
+
+<!-- ชั้นหลัง: เฟืองใหญ่เล็กตัดขอบจอ -->
+<svg viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <g id="bg"></g><g id="dust"></g>
+</svg>
+
+<!-- ชั้นหน้า: โลโก้กลาง -->
+<svg viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet" aria-label="Gear Up, SIIT!">
+  <defs>
+    <linearGradient id="ringG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6f2fc4"/><stop offset="1" stop-color="#4a1c92"/></linearGradient>
+    <linearGradient id="holeG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3c1673"/><stop offset="1" stop-color="#5a24a8"/></linearGradient>
+    <linearGradient id="gearG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e2cbff"/></linearGradient>
+    <radialGradient id="shine" cx=".35" cy=".25" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/></radialGradient>
+  </defs>
+  <g transform="translate(500 250)"><g id="logo">
+    <g id="ring" class="tb">
+      <circle r="168" fill="url(#ringG)" stroke="rgba(240,228,255,.85)" stroke-width="2.5"/>
+      <circle r="168" fill="url(#shine)"/>
+      <circle r="122" fill="none" stroke="rgba(240,228,255,.4)" stroke-width="1.2"/>
+      <g id="ringText" class="tb spin" style="--dur:70s"></g>
+    </g>
+    <g id="gearIn" class="tb"></g>
+    <circle id="hole" class="tb" r="40" fill="url(#holeG)"/>
+    <!-- น้องวาฬอยู่กลางเฟือง (อยู่ในกลุ่ม #logo เลยลอยไปพร้อมโลโก้) -->
+    <circle id="orcaDisc" cx="0" cy="0" r="77" fill="url(#gearG)"/>
+    <g id="orcaIn" class="tb"><g id="orcaBob" class="tb">
+      <image href="/orca.png" x="-105" y="-78" width="210" height="157" preserveAspectRatio="xMidYMid meet"/>
+    </g></g>
+  </g></g>
+  <text class="sub" x="500" y="470">SIIT RENTAL SERVICE</text>
+</svg>
+
+<script src="Intro.js"></script>
+</body>
+</html>
