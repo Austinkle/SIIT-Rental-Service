@@ -8,15 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css">
-<style>
-  [hidden] { display: none !important; }
-  .admin-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
-  .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 8px 0; }
-  dialog label { display: block; margin: 12px 0; font-size: 14px; }
-  dialog input, dialog select, dialog textarea {
-    display: block; width: 100%; margin-top: 4px; padding: 8px; box-sizing: border-box;
-  }
-</style>
+<link rel="stylesheet" href="/admin.css">
 </head>
 <body data-role="admin">
 <nav id="nav"></nav>
@@ -25,113 +17,124 @@
   <div>
     <div class="eyebrow font-display">Administration</div>
     <h1 class="font-display">Admin page</h1>
-    <p>Manage people, equipment and categories.</p>
+    <p>Manage users, categories and equipment of the SIIT Rental Service.</p>
   </div>
 </header>
 
 <div class="page-body narrow">
-  <div class="admin-tabs" id="tabs"></div>
-
-  <!-- ===== People ===== -->
-  <section id="tab-people">
-    <div class="toolbar">
-      <h2 class="sec-title"><span class="t font-display">People</span></h2>
-      <button type="button" class="btn btn-dark" id="addPersonBtn">+ Add student / staff</button>
-    </div>
-    <div class="table-wrap"><table id="users"></table></div>
+  <section class="stat-grid" aria-label="Summary">
+    <div class="stat-card ink"><div class="stat-top"><span class="stat-label">Total users</span><span class="stat-ic" id="icUsers"></span></div><div class="stat-num" id="stTotal">–</div><div class="stat-sub" id="subTotal">&nbsp;</div></div>
+    <div class="stat-card"><div class="stat-top"><span class="stat-label">Students</span><span class="stat-ic" id="icStudents"></span></div><div class="stat-num" id="stStudent">–</div><div class="stat-sub" id="subStudent">&nbsp;</div></div>
+    <div class="stat-card green"><div class="stat-top"><span class="stat-label">Staff</span><span class="stat-ic" id="icStaff"></span></div><div class="stat-num" id="stStaff">–</div><div class="stat-sub" id="subStaff">&nbsp;</div></div>
+    <div class="stat-card amber"><div class="stat-top"><span class="stat-label">Equipment</span><span class="stat-ic" id="icEquip"></span></div><div class="stat-num" id="stEquip">–</div><div class="stat-sub" id="subEquip">&nbsp;</div></div>
   </section>
 
-  <!-- ===== Equipment ===== -->
-  <section id="tab-equipment" hidden>
-    <div class="toolbar">
-      <h2 class="sec-title"><span class="t font-display">Equipment</span></h2>
-      <button type="button" class="btn btn-dark" id="addEquipBtn">+ Add equipment</button>
-    </div>
-    <div class="table-wrap"><table id="equip"></table></div>
-  </section>
+  <h2 class="sec-title"><span class="t font-display">All users</span></h2>
 
-  <!-- ===== Categories ===== -->
-  <section id="tab-categories" hidden>
-    <div class="toolbar">
-      <h2 class="sec-title"><span class="t font-display">Categories</span></h2>
-      <button type="button" class="btn btn-dark" id="addCatBtn">+ Add category</button>
+  <div class="admin-toolbar">
+    <div class="search-box" id="searchBox">
+      <input id="q" type="search" placeholder="Search name, email or ID" aria-label="Search users">
     </div>
-    <div class="table-wrap"><table id="cats"></table></div>
-  </section>
+    <div class="chips" id="roleChips" role="group" aria-label="Filter by role"></div>
+    <span class="count" id="count"></span>
+    <button type="button" class="add-btn" id="userAddBtn">+ Add user</button>
+  </div>
+
+  <div class="table-wrap"><table id="users"></table></div>
+
+  <h2 class="sec-title" style="margin-top:44px"><span class="t font-display">Categories</span><span class="pill violet" id="catCount">0</span></h2>
+
+  <form class="admin-toolbar" id="catForm" autocomplete="off">
+    <input class="input" id="catName" name="category_name" maxlength="50" required placeholder="New category name, e.g. Laptop Stands" aria-label="New category name" style="flex:1 1 260px;width:auto">
+    <button type="submit" class="add-btn" id="catAdd">+ Add category</button>
+  </form>
+  <p class="dlg-error" id="catError" role="alert" hidden></p>
+
+  <div class="table-wrap"><table id="cats"></table></div>
+
+  <h2 class="sec-title" style="margin-top:44px"><span class="t font-display">Equipment</span><span class="pill violet" id="eqCount">0</span></h2>
+
+  <div class="admin-toolbar">
+    <div class="search-box" id="eqSearchBox">
+      <input id="eqQ" type="search" placeholder="Search name, category or location" aria-label="Search equipment">
+    </div>
+    <div class="chips" id="eqChips" role="group" aria-label="Filter by status"></div>
+    <span class="count" id="eqShown"></span>
+    <button type="button" class="add-btn" id="eqAddBtn">+ Add equipment</button>
+  </div>
+
+  <div class="table-wrap"><table id="equipment"></table></div>
 </div>
 
-<!-- Add person pop-up -->
-<dialog id="personDialog">
-  <form id="personForm">
-    <h3 class="font-display">Add student or staff</h3>
-
+<!-- Add user -->
+<dialog id="userDialog" class="wide">
+  <form id="userForm" autocomplete="off">
+    <h3 class="font-display">Add user</h3>
     <label>Role
-      <select id="pRole">
+      <select id="uRole" name="user_type">
         <option value="student">Student</option>
         <option value="staff">Staff</option>
       </select>
     </label>
-    <label>First name <input id="pFirst" maxlength="50" required></label>
-    <label>Last name <input id="pLast" maxlength="50" required></label>
-    <label>Email (students: @g.siit.tu.ac.th)
-      <input id="pEmail" type="email" maxlength="100" required>
-    </label>
-    <label>Password (8 to 72 characters)
-      <input id="pPassword" type="password" minlength="8" maxlength="72" autocomplete="new-password" required>
-    </label>
-    <label>Phone (optional) <input id="pPhone" maxlength="20"></label>
-
+    <div class="form-grid">
+      <label>First name <input type="text" id="uFirst" maxlength="50" required></label>
+      <label>Last name <input type="text" id="uLast" maxlength="50" required></label>
+    </div>
+    <label>Email <input type="email" id="uEmail" maxlength="100" required placeholder="name@g.siit.tu.ac.th"></label>
+    <div class="form-grid">
+      <label>Password <input type="password" id="uPass" minlength="8" maxlength="72" required autocomplete="new-password"></label>
+      <label>Phone (optional) <input type="tel" id="uPhone" maxlength="20"></label>
+    </div>
     <div id="studentFields">
-      <label>Student ID (10 digits) <input id="pStudentId" inputmode="numeric" pattern="\d{10}"></label>
-      <label>Major (optional) <input id="pMajor" maxlength="50"></label>
-      <label>Year 1-4 (optional) <input id="pYear" type="number" min="1" max="4"></label>
+      <div class="form-grid">
+        <label>Student ID <input type="text" id="uStudentId" inputmode="numeric" pattern="\d{10}" maxlength="10" placeholder="10 digits"></label>
+        <label>Year (optional)
+          <select id="uYear"><option value="">–</option><option>1</option><option>2</option><option>3</option><option>4</option></select>
+        </label>
+      </div>
+      <label>Major (optional) <input type="text" id="uMajor" maxlength="50"></label>
     </div>
     <div id="staffFields" hidden>
-      <label>Staff ID <input id="pStaffId" inputmode="numeric" pattern="\d+"></label>
+      <label>Staff ID <input type="text" id="uStaffId" inputmode="numeric" pattern="\d+" maxlength="19" placeholder="Whole number"></label>
     </div>
-
-    <p id="personError" class="dlg-error" role="alert" hidden></p>
+    <p id="userHint" class="dlg-hint">Students must use an @g.siit.tu.ac.th email. Password: at least 8 characters.</p>
+    <p id="userError" class="dlg-error" role="alert" hidden></p>
     <div class="dlg-actions">
-      <button type="button" class="btn btn-outline" id="personCancel">Cancel</button>
-      <button type="submit" class="btn btn-dark" id="personSave">Save</button>
+      <button type="button" class="btn btn-outline" id="userCancel">Cancel</button>
+      <button type="submit" class="btn btn-dark" id="userSubmit">Create user</button>
     </div>
   </form>
 </dialog>
 
-<!-- Add equipment pop-up -->
-<dialog id="equipDialog">
-  <form id="equipForm">
+<!-- Add equipment -->
+<dialog id="eqDialog" class="wide">
+  <form id="eqForm" autocomplete="off">
     <h3 class="font-display">Add equipment</h3>
-    <label>Name <input id="eName" maxlength="100" required></label>
-    <label>Category <select id="eCategory" required></select></label>
-    <label>Location
-      <select id="eLocation" required>
-        <option value="">Select location</option>
-        <option value="Rangsit">Rangsit</option>
-        <option value="Bangkadi">Bangkadi</option>
-      </select>
-    </label>
-    <label>Quantity <input id="eQuantity" type="number" min="1" max="100" value="1" required></label>
-    <label>Description (optional) <textarea id="eDescription" rows="3" maxlength="1000"></textarea></label>
-
-    <p id="equipError" class="dlg-error" role="alert" hidden></p>
+    <label>Name <input type="text" id="eName" maxlength="100" required placeholder="e.g. Casio FX-991 Calculator"></label>
+    <div class="form-grid">
+      <label>Category <select id="eCat" required></select></label>
+      <label>Location
+        <select id="eLoc" required><option value="Rangsit">Rangsit</option><option value="Bangkadi">Bangkadi</option></select>
+      </label>
+    </div>
+    <label>Quantity <input type="number" id="eQty" min="1" max="100" step="1" value="1" required></label>
+    <label>Description (optional) <textarea id="eDesc" rows="3" maxlength="1000"></textarea></label>
+    <p id="eqError" class="dlg-error" role="alert" hidden></p>
     <div class="dlg-actions">
-      <button type="button" class="btn btn-outline" id="equipCancel">Cancel</button>
-      <button type="submit" class="btn btn-dark" id="equipSave">Save item</button>
+      <button type="button" class="btn btn-outline" id="eqCancel">Cancel</button>
+      <button type="submit" class="btn btn-dark" id="eqSubmit">Add equipment</button>
     </div>
   </form>
 </dialog>
 
-<!-- Add category pop-up -->
-<dialog id="catDialog">
-  <form id="catForm">
-    <h3 class="font-display">Add category</h3>
-    <label>Category name <input id="cName" maxlength="50" required></label>
-
-    <p id="catError" class="dlg-error" role="alert" hidden></p>
+<!-- Confirm delete -->
+<dialog id="delDialog">
+  <form method="dialog" id="delForm">
+    <h3 class="font-display">Remove equipment</h3>
+    <p>Remove <strong id="delName"></strong> from the catalog? It will be marked as removed and hidden from students.</p>
     <div class="dlg-actions">
-      <button type="button" class="btn btn-outline" id="catCancel">Cancel</button>
-      <button type="submit" class="btn btn-dark" id="catSave">Save category</button>
+      <button type="button" class="btn btn-outline" id="delCancel">Cancel</button>
+      <button type="submit" class="btn btn-danger" id="delConfirm">Remove</button>
     </div>
   </form>
 </dialog>
@@ -139,244 +142,394 @@
 <script src="/icons.js"></script>
 <script src="/ui.js"></script>
 <script src="/nav.js"></script>
-<script src="/shared.js"></script>
 <script>
+(function () {
+  const { h, icon, toast } = UI;
   const $ = id => document.getElementById(id);
-  const textNode = s => document.createTextNode(String(s));
-  const toast = msg => (window.UI && UI.toast) ? UI.toast(msg) : alert(msg);
+  const ROLES = [['all', 'All'], ['student', 'Students'], ['staff', 'Staff'], ['admin', 'Admins']];
+  const PILL = { student: 'violet', staff: 'green', admin: 'ink' };
+  const EQ_FILTERS = [['all', 'All'], ['active', 'Active'], ['maintenance', 'Maintenance'], ['retired', 'Retired'], ['removed', 'Removed']];
+  const EQ_STATUSES = ['active', 'maintenance', 'retired'];
+  const cap = v => v.charAt(0).toUpperCase() + v.slice(1);
 
-  // send a change to the server; returns { ok, error }
+  let users = [], role = 'all', term = '';
+  let cats = [], equipment = [], eqFilter = 'all', eqTerm = '';
+
+  const roleId = u => u.student_id || u.staff_id || u.admin_id || '';
+  const initials = u => ((u.first_name || '').charAt(0) + (u.last_name || '').charAt(0)).toUpperCase() || '?';
+
+  // POST/PATCH/DELETE helper -> { ok, data }
   async function send(method, url, body) {
     const res = await fetch(url, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: body ? { 'Content-Type': 'application/json' } : {},
       body: body ? JSON.stringify(body) : undefined
     });
     const data = await res.json().catch(() => ({}));
-    return { ok: res.ok, error: data.error };
+    return { ok: res.ok, data };
+  }
+  function showError(el, msg) { el.textContent = msg; el.hidden = false; }
+
+  // icons in the stat cards + search boxes
+  $('icUsers').append(icon('inbox', 17));
+  $('icStudents').append(icon('book-open', 17));
+  $('icStaff').append(icon('clipboard-check', 17));
+  $('icEquip').append(icon('package', 17));
+  $('searchBox').prepend(icon('search', 16));
+  $('eqSearchBox').prepend(icon('search', 16));
+
+  // ================= users =================
+  function renderChips() {
+    const counts = { all: users.length };
+    users.forEach(u => { counts[u.user_type] = (counts[u.user_type] || 0) + 1; });
+    $('roleChips').replaceChildren(...ROLES.map(([key, label]) =>
+      h('button', { type: 'button', class: 'chip' + (role === key ? ' active' : ''), 'aria-pressed': String(role === key),
+        onclick: () => { role = key; renderChips(); renderTable(); } },
+        label, h('span', { class: 'chip-n', text: String(counts[key] || 0) }))));
   }
 
-  // shared behaviour of the three pop-ups: open, cancel, submit
-  function setupDialog({ dialog, form, errorBox, saveBtn, cancelBtn, openBtn, onOpen, buildRequest, onSaved }) {
-    openBtn.addEventListener('click', () => {
-      form.reset();
-      errorBox.hidden = true;
-      if (onOpen) onOpen();
-      dialog.showModal();
+  function renderTable() {
+    const t = term.trim().toLowerCase();
+    const rows = users.filter(u => (role === 'all' || u.user_type === role) &&
+      (!t || [u.first_name, u.last_name, u.email, u.user_id, roleId(u)].join(' ').toLowerCase().includes(t)));
+
+    $('count').textContent = rows.length + ' of ' + users.length + ' users';
+    const table = $('users');
+    table.replaceChildren();
+    if (!rows.length) { table.createCaption().textContent = users.length ? 'No users match your search' : 'No data'; return; }
+
+    const head = table.createTHead().insertRow();
+    ['Name', 'User ID', 'Email', 'Role', 'Student / Staff ID'].forEach(l => head.append(h('th', { text: l })));
+
+    const body = table.createTBody();
+    rows.forEach(u => {
+      const tr = body.insertRow();
+      const rid = roleId(u);
+      tr.append(
+        h('td', {}, h('div', { class: 'user-cell' },
+          h('span', { class: 'avatar ' + u.user_type, 'aria-hidden': 'true', text: initials(u) }),
+          h('span', { class: 'user-name', text: u.first_name + ' ' + u.last_name }))),
+        h('td', { class: 'id-cell', text: '#' + u.user_id }),
+        h('td', { class: 'cell-muted', text: u.email }),
+        h('td', {}, h('span', { class: 'pill ' + (PILL[u.user_type] || ''), text: u.user_type })),
+        h('td', { class: 'id-cell' + (rid ? ' has-id' : ''), text: rid ? String(rid) : '—' }));
     });
-    cancelBtn.addEventListener('click', () => dialog.close());
-
-    form.addEventListener('submit', async event => {
-      event.preventDefault();
-      errorBox.hidden = true;
-      saveBtn.disabled = true;
-      try {
-        const { method, url, body } = buildRequest();
-        const out = await send(method, url, body);
-        if (out.ok) {
-          dialog.close();
-          onSaved();
-          return;
-        }
-        errorBox.textContent = out.error || 'Could not save';
-        errorBox.hidden = false;
-      } catch {
-        errorBox.textContent = 'Network error. Please try again.';
-        errorBox.hidden = false;
-      } finally {
-        saveBtn.disabled = false;
-      }
-    });
   }
 
-  // ===================== tabs =====================
-  const TABS = [['people', 'People'], ['equipment', 'Equipment'], ['categories', 'Categories']];
-  const tabButtons = {};
-
-  function showTab(name) {
-    TABS.forEach(([id]) => {
-      $('tab-' + id).hidden = id !== name;
-      tabButtons[id].className = 'btn ' + (id === name ? 'btn-dark' : 'btn-outline');
-    });
-    history.replaceState(null, '', '#' + name);          // remember the tab when the page is refreshed
+  function updateUserStats() {
+    $('stTotal').textContent = users.length;
+    $('stStudent').textContent = users.filter(u => u.user_type === 'student').length;
+    const n = users.filter(u => u.user_type === 'student').length, f = users.filter(u => u.user_type === 'staff').length;
+    const a = users.filter(u => u.user_type === 'admin').length, pct = x => (users.length ? Math.round(100 * x / users.length) : 0) + '% of all users';
+    $('stStaff').textContent = f;
+    $('subTotal').textContent = a + (a === 1 ? ' admin account' : ' admin accounts');
+    $('subStudent').textContent = pct(n);
+    $('subStaff').textContent = pct(f);
   }
 
-  TABS.forEach(([id, label]) => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.textContent = label;
-    btn.addEventListener('click', () => showTab(id));
-    tabButtons[id] = btn;
-    $('tabs').appendChild(btn);
-  });
-
-function personActions(r) {
-  const box = document.createElement('span');
-  if (r.user_type !== 'admin') {                    // no button on admin rows
-    const del = document.createElement('button');
-    del.type = 'button';
-    del.className = 'btn btn-danger';
-    del.textContent = 'Delete';
-    del.addEventListener('click', () => deletePerson(r));
-    box.appendChild(del);
+  async function loadUsers() {
+    $('users').createCaption().textContent = 'Loading…';
+    try {
+      const res = await fetch('/admin/api/users');
+      if (!res.ok) throw new Error('users');
+      users = await res.json();
+      updateUserStats();
+      renderChips();
+      renderTable();
+    } catch {
+      $('users').replaceChildren();
+      $('users').createCaption().textContent = 'Could not load data';
+      toast('Could not load users', 'error');
+    }
   }
-  return box;
-}
 
-async function deletePerson(r) {
-  const who = r.first_name + ' ' + r.last_name + ' (' + r.email + ')';
-  if (!confirm('Delete the account of ' + who + '?\nThis cannot be undone.')) return;
-
-  const out = await send('DELETE', '/admin/api/users/' + r.user_id);
-  if (out.ok) toast('Account deleted');
-  else alert(out.error || 'Could not delete this account');
-  loadPeople();                                     // refresh either way
-}
-
-function loadPeople() {
-  loadTable('/admin/api/users', 'users', [
-    { key: 'user_id', label: 'ID' },
-    { label: 'Name',   render: r => textNode(r.first_name + ' ' + r.last_name) },
-    { key: 'email',   label: 'Email' },
-    { key: 'user_type', label: 'Role' },
-    { label: 'Student / staff / admin ID',
-      render: r => textNode(r.student_id ?? r.staff_id ?? r.admin_id ?? '') },
-    { label: '', render: personActions }
-  ]);
-}
-
-  function updatePersonFields() {
-    const student = $('pRole').value === 'student';
+  // ----- add user dialog -----
+  const userDlg = $('userDialog');
+  function syncRoleFields() {
+    const student = $('uRole').value === 'student';
     $('studentFields').hidden = !student;
     $('staffFields').hidden = student;
-    $('pStudentId').required = student;      // a hidden required field would block the form
-    $('pStaffId').required = !student;
+    $('uStudentId').required = student;
+    $('uStaffId').required = !student;
+    $('uEmail').placeholder = student ? 'name@g.siit.tu.ac.th' : 'name@example.com';
   }
-  $('pRole').addEventListener('change', updatePersonFields);
+  $('uRole').addEventListener('change', syncRoleFields);
+  $('userAddBtn').addEventListener('click', () => {
+    $('userForm').reset();
+    $('userError').hidden = true;
+    syncRoleFields();
+    userDlg.showModal();
+  });
+  $('userCancel').addEventListener('click', () => userDlg.close());
 
-  setupDialog({
-    dialog: $('personDialog'), form: $('personForm'), errorBox: $('personError'),
-    saveBtn: $('personSave'), cancelBtn: $('personCancel'), openBtn: $('addPersonBtn'),
-    onOpen: updatePersonFields,
-    buildRequest: () => {
-      const role = $('pRole').value;
-      const body = {
-        user_type: role,
-        first_name: $('pFirst').value,
-        last_name: $('pLast').value,
-        email: $('pEmail').value,
-        password: $('pPassword').value,
-        phone: $('pPhone').value
-      };
-      if (role === 'student') {
-        body.student_id = $('pStudentId').value;
-        body.major = $('pMajor').value;
-        body.year = $('pYear').value;
+  $('userForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = $('userSubmit');
+    $('userError').hidden = true;
+    const student = $('uRole').value === 'student';
+    const body = {
+      user_type: $('uRole').value,
+      first_name: $('uFirst').value,
+      last_name: $('uLast').value,
+      email: $('uEmail').value,
+      password: $('uPass').value,
+      phone: $('uPhone').value
+    };
+    if (student) {
+      body.student_id = $('uStudentId').value;
+      body.major = $('uMajor').value;
+      body.year = $('uYear').value;
+    } else {
+      body.staff_id = $('uStaffId').value;
+    }
+    btn.disabled = true;
+    try {
+      const { ok, data } = await send('POST', '/admin/api/users', body);
+      if (ok) {
+        userDlg.close();
+        toast('User created.');
+        loadUsers();
       } else {
-        body.staff_id = $('pStaffId').value;
+        showError($('userError'), data.error || 'Could not create the user');
       }
-      return { method: 'POST', url: '/admin/api/users', body };
-    },
-    onSaved: () => { toast('Account created'); loadPeople(); }
+    } catch {
+      showError($('userError'), 'Network error. Please try again.');
+    } finally {
+      btn.disabled = false;
+    }
   });
 
-  // ===================== equipment =====================
-  function statusCell(r) {
-    if (r.is_deleted) return textNode('Deleted');
+  // ================= categories =================
+  function fillCategorySelect() {
+    $('eCat').replaceChildren(...(cats.length
+      ? cats.map(c => h('option', { value: c.category_id, text: c.category_name }))
+      : [h('option', { value: '', text: 'Add a category first' })]));
+  }
 
-    const sel = document.createElement('select');
-    ['active', 'maintenance', 'retired'].forEach(s => sel.add(new Option(s, s, false, s === r.status)));
+  async function loadCategories() {
+    const table = $('cats');
+    table.replaceChildren();
+    try {
+      const res = await fetch('/admin/api/categories');
+      if (!res.ok) throw new Error('categories');
+      cats = await res.json();
+      $('catCount').textContent = String(cats.length);
+      fillCategorySelect();
+      if (!cats.length) { table.createCaption().textContent = 'No categories yet'; return; }
+
+      const head = table.createTHead().insertRow();
+      ['Category', 'Equipment'].forEach(l => head.append(h('th', { text: l })));
+      const body = table.createTBody();
+      cats.forEach(c => {
+        const tr = body.insertRow();
+        tr.append(
+          h('td', {}, h('div', { class: 'user-cell' },
+            h('span', { class: 'avatar', 'aria-hidden': 'true' }, icon(UI.catMeta(c.category_name).icon, 16)),
+            h('span', { class: 'user-name', text: c.category_name }))),
+          h('td', { class: 'id-cell has-id', text: String(c.equipment_count) + (Number(c.equipment_count) === 1 ? ' item' : ' items') }));
+      });
+    } catch {
+      table.createCaption().textContent = 'Could not load categories';
+    }
+  }
+
+  $('catForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const err = $('catError'), btn = $('catAdd'), input = $('catName');
+    err.hidden = true;
+    btn.disabled = true;
+    try {
+      const { ok, data } = await send('POST', '/admin/api/categories', { category_name: input.value });
+      if (ok) {
+        input.value = '';
+        toast('Category added.');
+        loadCategories();
+      } else {
+        showError(err, data.error || 'Could not add the category');
+      }
+    } catch {
+      showError(err, 'Network error. Please try again.');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // ================= equipment =================
+  const isRemoved = e => Number(e.is_deleted) === 1;
+  const eqKind = e => isRemoved(e) ? 'removed' : e.status;
+
+  function renderEqChips() {
+    const counts = { all: 0, active: 0, maintenance: 0, retired: 0, removed: 0 };
+    equipment.forEach(e => { counts[eqKind(e)]++; if (!isRemoved(e)) counts.all++; });
+    $('eqChips').replaceChildren(...EQ_FILTERS.map(([key, label]) =>
+      h('button', { type: 'button', class: 'chip' + (eqFilter === key ? ' active' : ''), 'aria-pressed': String(eqFilter === key),
+        onclick: () => { eqFilter = key; renderEqChips(); renderEquipment(); } },
+        label)));
+  }
+
+  function statusSelect(e) {
+    const sel = h('select', { class: 'status-select ' + e.status, 'aria-label': 'Status of ' + e.name },
+      EQ_STATUSES.map(s => h('option', { value: s, selected: s === e.status, text: cap(s) })));
     sel.addEventListener('change', async () => {
-      const out = await send('PATCH', '/admin/api/equipment/' + r.equipment_id + '/status', { status: sel.value });
-      if (!out.ok) alert(out.error || 'Could not change the status');
-      loadEquipment();
+      const next = sel.value;
+      sel.disabled = true;
+      try {
+        const { ok, data } = await send('PATCH', '/admin/api/equipment/' + e.equipment_id + '/status', { status: next });
+        if (!ok) throw new Error(data.error || 'Could not change the status');
+        e.status = next;
+        sel.className = 'status-select ' + next;
+        toast(e.name + ' is now ' + next + '.');
+        renderEqChips();
+        if (eqFilter !== 'all') renderEquipment();
+      } catch (err) {
+        sel.value = e.status;
+        toast(err.message || 'Network error. Please try again.', 'error');
+      } finally {
+        sel.disabled = false;
+      }
     });
     return sel;
   }
 
-  function equipActions(r) {
-    const box = document.createElement('span');
-    if (!r.is_deleted) {
-      const del = document.createElement('button');
-      del.type = 'button';
-      del.className = 'btn btn-danger';
-      del.textContent = 'Delete';
-      del.addEventListener('click', async () => {
-        if (!confirm('Delete "' + r.name + '"? It will disappear from the catalog.')) return;
-        const out = await send('DELETE', '/admin/api/equipment/' + r.equipment_id);
-        if (!out.ok) alert(out.error || 'Could not delete this equipment');
+  function renderEquipment() {
+    const t = eqTerm.trim().toLowerCase();
+    const rows = equipment.filter(e => {
+      if (eqFilter === 'all' ? isRemoved(e) : eqKind(e) !== eqFilter) return false;
+      return !t || [e.name, e.category_name, e.location, UI.assetTag(e.equipment_id)].join(' ').toLowerCase().includes(t);
+    });
+
+    const live = equipment.filter(e => !isRemoved(e)).length;
+    $('eqCount').textContent = String(live);
+    $('stEquip').textContent = live;
+    const unitsLeft = equipment.filter(e => !isRemoved(e)).reduce((t, e) => t + Number(e.available_quantity), 0);
+    const unitsAll = equipment.filter(e => !isRemoved(e)).reduce((t, e) => t + Number(e.total_quantity), 0);
+    $('subEquip').textContent = unitsLeft + ' of ' + unitsAll + ' units in stock';
+    $('eqShown').textContent = rows.length + ' shown';
+
+    const table = $('equipment');
+    table.replaceChildren();
+    if (!rows.length) { table.createCaption().textContent = equipment.length ? 'No equipment matches your filter' : 'No equipment yet'; return; }
+
+    const head = table.createTHead().insertRow();
+    ['Equipment', 'Category', 'Location', 'In stock', 'Status'].forEach(l => head.append(h('th', { text: l })));
+
+    const body = table.createTBody();
+    rows.forEach(e => {
+      const removed = isRemoved(e);
+      const tr = body.insertRow();
+      if (removed) tr.className = 'row-removed';
+      tr.append(
+        h('td', {}, h('div', { class: 'user-cell' },
+          h('span', { class: 'avatar', 'aria-hidden': 'true' }, icon(UI.catMeta(e.category_name).icon, 16)),
+          h('div', {},
+            h('div', { class: 'user-name', text: e.name }),
+            h('div', { class: 'id-cell has-id', text: UI.assetTag(e.equipment_id) })))),
+        h('td', { class: 'cell-muted', text: e.category_name }),
+        h('td', {}, h('span', { class: 'campus-tag ' + String(e.location || '').toLowerCase(), text: e.location || '—' })),
+        h('td', { class: 'id-cell has-id', text: e.available_quantity + ' / ' + e.total_quantity }),
+        h('td', {}, removed ? h('span', { class: 'pill red', text: 'Removed' }) : statusSelect(e)),
+        h('td', { class: 'x-cell' }, removed ? null : h('button', {
+          type: 'button', class: 'icon-btn danger', title: 'Remove ' + e.name, 'aria-label': 'Remove ' + e.name,
+          onclick: () => askDelete(e)
+        }, icon('x', 16))));
+    });
+  }
+
+  async function loadEquipment() {
+    $('equipment').createCaption().textContent = 'Loading…';
+    try {
+      const res = await fetch('/admin/api/equipment');
+      if (!res.ok) throw new Error('equipment');
+      equipment = await res.json();
+      renderEqChips();
+      renderEquipment();
+    } catch {
+      $('equipment').replaceChildren();
+      $('equipment').createCaption().textContent = 'Could not load equipment';
+      toast('Could not load equipment', 'error');
+    }
+  }
+
+  $('eqQ').addEventListener('input', e => { eqTerm = e.target.value; renderEquipment(); });
+
+  // ----- add equipment dialog -----
+  const eqDlg = $('eqDialog');
+  $('eqAddBtn').addEventListener('click', async () => {
+    $('eqForm').reset();
+    $('eqError').hidden = true;
+    if (!cats.length) await loadCategories();
+    fillCategorySelect();
+    eqDlg.showModal();
+  });
+  $('eqCancel').addEventListener('click', () => eqDlg.close());
+
+  $('eqForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = $('eqSubmit');
+    $('eqError').hidden = true;
+    if (!$('eCat').value) return showError($('eqError'), 'Add a category first, then try again.');
+    btn.disabled = true;
+    try {
+      const { ok, data } = await send('POST', '/admin/api/equipment', {
+        name: $('eName').value,
+        category_id: $('eCat').value,
+        location: $('eLoc').value,
+        quantity: $('eQty').value,
+        description: $('eDesc').value
+      });
+      if (ok) {
+        eqDlg.close();
+        toast('Equipment added.');
+        loadEquipment();
+        loadCategories();      // refresh the per-category counts
+      } else {
+        showError($('eqError'), data.error || 'Could not add the equipment');
+      }
+    } catch {
+      showError($('eqError'), 'Network error. Please try again.');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // ----- remove equipment -----
+  const delDlg = $('delDialog');
+  let pending = null;
+  function askDelete(e) {
+    pending = e;
+    $('delName').textContent = e.name + ' (' + UI.assetTag(e.equipment_id) + ')';
+    delDlg.showModal();
+  }
+  $('delCancel').addEventListener('click', () => delDlg.close());
+  $('delForm').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    if (!pending) return;
+    const btn = $('delConfirm');
+    btn.disabled = true;
+    try {
+      const { ok, data } = await send('DELETE', '/admin/api/equipment/' + pending.equipment_id);
+      delDlg.close();
+      if (ok) {
+        toast('Equipment removed.');
         loadEquipment();
         loadCategories();
-      });
-      box.appendChild(del);
-    }
-    return box;
-  }
-
-  function loadEquipment() {
-    loadTable('/admin/api/equipment', 'equip', [
-      { key: 'name',          label: 'Name' },
-      { key: 'category_name', label: 'Category' },
-      { key: 'location',      label: 'Location' },
-      { label: 'Available',   render: r => textNode(r.available_quantity + ' / ' + r.total_quantity) },
-      { label: 'Status',      render: statusCell },
-      { label: '',            render: equipActions }
-    ]);
-  }
-
-  setupDialog({
-    dialog: $('equipDialog'), form: $('equipForm'), errorBox: $('equipError'),
-    saveBtn: $('equipSave'), cancelBtn: $('equipCancel'), openBtn: $('addEquipBtn'),
-    buildRequest: () => ({
-      method: 'POST',
-      url: '/admin/api/equipment',
-      body: {
-        name: $('eName').value,
-        category_id: $('eCategory').value,
-        location: $('eLocation').value,
-        quantity: $('eQuantity').value,
-        description: $('eDescription').value
+      } else {
+        toast(data.error || 'Could not remove this equipment', 'error');
       }
-    }),
-    onSaved: () => { toast('Equipment added'); loadEquipment(); loadCategories(); }
+    } catch {
+      delDlg.close();
+      toast('Network error. Please try again.', 'error');
+    } finally {
+      btn.disabled = false;
+      pending = null;
+    }
   });
 
-  // ===================== categories =====================
-  async function fillCategorySelect() {                  // the category list inside "Add equipment"
-    const res = await fetch('/admin/api/categories');
-    if (!res.ok) return;
-    const cats = await res.json();
-    const sel = $('eCategory');
-    sel.innerHTML = '';
-    sel.add(new Option('Select category', ''));
-    cats.forEach(c => sel.add(new Option(c.category_name, c.category_id)));
-  }
-
-  function loadCategories() {
-    loadTable('/admin/api/categories', 'cats', [
-      { key: 'category_name',   label: 'Category' },
-      { key: 'equipment_count', label: 'Equipment' }
-    ]);
-    fillCategorySelect();
-  }
-
-  setupDialog({
-    dialog: $('catDialog'), form: $('catForm'), errorBox: $('catError'),
-    saveBtn: $('catSave'), cancelBtn: $('catCancel'), openBtn: $('addCatBtn'),
-    buildRequest: () => ({
-      method: 'POST',
-      url: '/admin/api/categories',
-      body: { category_name: $('cName').value }
-    }),
-    onSaved: () => { toast('Category added'); loadCategories(); }
-  });
-
-  // ===================== start =====================
-  const startTab = location.hash.slice(1);
-  showTab(TABS.some(([id]) => id === startTab) ? startTab : 'people');
-  loadPeople();
-  loadEquipment();
+  $('q').addEventListener('input', e => { term = e.target.value; renderTable(); });
+  loadUsers();
   loadCategories();
+  loadEquipment();
+})();
 </script>
 </body>
 </html>

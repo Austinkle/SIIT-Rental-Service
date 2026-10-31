@@ -200,7 +200,9 @@ async function load() {
   const body = table.createTBody();
   rows.forEach(r => {
     const tr = body.insertRow();
-    tr.insertCell().textContent = r.name;
+    tr.insertCell().append(UI.h('div', { class: 'item-cell' },
+      UI.h('span', { class: 'item-ic', 'aria-hidden': 'true' }, UI.icon(UI.catMeta(r.category_name).icon, 16)),
+      UI.h('span', { class: 'item-name', text: r.name })));
     tr.insertCell().textContent = r.category_name;
     tr.insertCell().textContent = r.equipment_id;
     tr.insertCell().textContent = r.available_quantity > 0 ? 'Available' : 'Borrowed';
