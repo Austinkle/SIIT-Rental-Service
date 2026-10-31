@@ -1,13 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overdue · SIIT Rental Service</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css">
+</head>
 <body data-role="staff">
 <nav id="nav"></nav>
 
-<h1>Overdue</h1>
-<p>Rentals that were returned after the due date, or are past the due date and not returned yet.</p>
+<header class="page-header">
+  <div>
+    <div class="eyebrow font-display">Library staff · Rangsit &amp; Bangkadi</div>
+    <h1 class="font-display">Overdue</h1>
+    <p>Rentals that were returned after the due date, or are past the due date and not returned yet.</p>
+  </div>
+</header>
 
-<div id="kinds"></div>
-<table id="overdue" border="1"></table>
+<div class="page-body narrow">
+  <div id="kinds"></div>
+  <div class="table-wrap"><table id="overdue"></table></div>
+</div>
 
+<script src="/icons.js"></script>
+<script src="/ui.js"></script>
 <script src="/nav.js"></script>
 <script src="/shared.js"></script>
 <script>
@@ -47,6 +66,7 @@
 
     const btn = document.createElement('button');
     btn.textContent = 'Notify';
+    btn.className = 'btn btn-dark';
     btn.disabled = !!recent;
     btn.title = recent ? 'Already notified in the last 24 hours' : 'Send a notification to the student';
     btn.addEventListener('click', () => notify(r));
@@ -82,3 +102,5 @@
   loadOverdue();
   setInterval(loadOverdue, 60000);    // refresh every minute
 </script>
+</body>
+</html>

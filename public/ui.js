@@ -99,3 +99,24 @@
 
   window.UI = { icon, h, fmtDate, fmtDateTime, catMeta, assetTag, badge, toast, itemCard };
 })();
+
+/* label table cells from their header text (used by the phone card layout in style.css) */
+(function () {
+  function label(table) {
+    const heads = [...table.querySelectorAll('thead th')].map(th => th.textContent.trim());
+    if (!heads.length) return;
+    table.querySelectorAll('tbody tr').forEach(tr => {
+      const cells = [...tr.children];
+      cells.forEach((td, i) => {
+        if (heads[i]) td.setAttribute('data-label', heads[i]);
+        else if (i >= heads.length) td.classList.add('row-x');   // extra cell past the headers = delete (X) button
+      });
+    });
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.table-wrap table').forEach(t => {
+      new MutationObserver(() => label(t)).observe(t, { childList: true, subtree: true });
+      label(t);
+    });
+  });
+})();
