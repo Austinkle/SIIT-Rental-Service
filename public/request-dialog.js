@@ -6,15 +6,15 @@
   document.body.insertAdjacentHTML('beforeend', `
     <dialog id="requestDialog">
       <form id="requestForm">
-        <h3>Request rental</h3>
+        <h3 class="font-display">Request rental</h3>
         <p><strong id="dlgItem"></strong><br><span id="dlgLocation"></span></p>
         <label>Borrow date <input type="date" id="borrowDate" required></label>
         <label>Due date <input type="date" id="dueDate" required></label>
         <p id="dlgHint"></p>
         <p id="dlgError" class="dlg-error" role="alert" hidden></p>
         <div class="dlg-actions">
-          <button type="button" id="dlgCancel">Cancel</button>
-          <button type="submit" id="dlgConfirm">Confirm request</button>
+          <button type="button" class="btn btn-outline" id="dlgCancel">Cancel</button>
+          <button type="submit" class="btn btn-dark" id="dlgConfirm">Confirm request</button>
         </div>
       </form>
     </dialog>`);
@@ -92,7 +92,8 @@
 
       if (res.ok) {
         dialog.close();
-        alert('Request sent. Staff will review it.');
+        UI.toast('Request sent. Staff will review it.');
+        document.dispatchEvent(new CustomEvent('request-sent'));
         return;
       }
       dlgError.textContent = data.error || 'Could not send request';

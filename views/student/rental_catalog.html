@@ -1,145 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rental Catalog · SIIT Rental Service</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css">
+</head>
 <body data-role="student">
 <nav id="nav"></nav>
 
-<p style="line-height: 1.6;">---LIBRARY COUNTER - RANGSIT & BANGKADI</p>
-<h2>RENTAL CATALOG</h2>
-<p style="line-height: 1.6;">SIIT equipment available to borrow, free with your student ID.</p>
-<div id="categories"></div><br>
-<p id="message"></p>
-<form id="searchForm">
-  <input id="search" type="search" placeholder="Search by equipment or category name" size="40">
-  <button type="submit">Search</button>
-</form>
-<div id="location"></div>
-<p id="message"></p>
-<div id="active"></div>
-<p id="message"></p>
-<table id="equip" border="1"></table>
+<header class="page-header">
+  <div>
+    <div class="eyebrow font-display">Library Counter · Rangsit &amp; Bangkadi</div>
+    <h1 class="font-display">Rental Catalog</h1>
+    <p>SIIT equipment available to borrow, free with your student ID.</p>
+  </div>
+</header>
 
+<div class="page-body">
+  <div class="chips" id="categories" role="group" aria-label="Category"></div>
+
+  <form class="filter-bar" id="searchForm" role="search">
+    <div class="search-box">
+      <span data-icon="search"></span>
+      <input id="search" type="search" placeholder="Search by equipment or category name" aria-label="Search equipment">
+    </div>
+    <div class="seg" id="location" role="group" aria-label="Campus"></div>
+    <div class="divider"></div>
+    <label class="switch">
+      <input type="checkbox" id="availableOnly">
+      <span class="track"></span>
+      <span class="lbl">Available Now</span>
+    </label>
+    <span class="count" id="count" aria-live="polite"></span>
+  </form>
+
+  <div class="catalog-layout">
+    <main>
+      <p id="message" class="h-sub"></p>
+      <div class="item-grid" id="equip"></div>
+    </main>
+
+    <aside class="aside-sticky">
+      <div class="panel">
+        <div class="panel-head">
+          <div class="t font-display">My Active Rentals</div>
+          <span class="n" id="activeCount">0</span>
+        </div>
+        <div id="active"></div>
+        <div class="panel-foot">
+          <a class="btn btn-outline btn-block" href="/student/my_rental" style="font-size:12px;font-weight:600">View Full Rental History</a>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-row" style="font-size:12px;font-weight:700">Library Counters</div>
+        <div class="campus-card" style="background:rgba(109,40,217,.06)">
+          <div class="n" style="color:var(--primary)"><span data-icon="map-pin" data-size="13"></span> Rangsit Campus</div>
+          <div class="l">1st Floor, SIIT Main Building</div>
+          <div class="h">Mon–Fri 08:15–19:45 · Sat 08:15–16:45</div>
+        </div>
+        <div class="campus-card" style="background:var(--surface-2)">
+          <div class="n"><span data-icon="map-pin" data-size="13"></span> Bangkadi Campus</div>
+          <div class="l">3rd Floor, Sirindhorn Tower</div>
+          <div class="h">Mon–Fri 08:15–16:45</div>
+        </div>
+        <div class="fine">Bring your TU student ID to borrow. Items must be returned on time.</div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<footer id="footer"></footer>
+
+<script src="/icons.js"></script>
+<script src="/ui.js"></script>
 <script src="/nav.js"></script>
 <script src="/request-dialog.js"></script>
 <script>
+const { h, icon } = UI;
+document.querySelectorAll('[data-icon]').forEach(el => el.replaceWith(icon(el.dataset.icon, Number(el.dataset.size) || 15)));
+
 const searchBox = document.getElementById('search');
-const table = document.getElementById('equip');
+const grid = document.getElementById('equip');
 const message = document.getElementById('message');
+const countEl = document.getElementById('count');
+const availableOnly = document.getElementById('availableOnly');
 
-let selectedCategory = null;   // null = all categories
+// start from the link the student came from (Home search / category tile)
+const params = new URLSearchParams(location.search);
+searchBox.value = params.get('q') || '';
+let selectedCategory = Number(params.get('category')) || null;   // null = all categories
+let selectedLocation = null;                                     // null = both campuses
 let latestCall = 0;
-let selectedLocation = null;
 
-// ----- category buttons -----
+// ----- category chips -----
+function chip(label, id, iconName) {
+  const btn = h('button', { type: 'button', class: 'chip' + (id === selectedCategory ? ' active' : ''), 'aria-pressed': id === selectedCategory },
+    icon(iconName, 15), label);
+  btn.addEventListener('click', () => {
+    selectedCategory = id;
+    document.querySelectorAll('#categories .chip').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
+    btn.classList.add('active'); btn.setAttribute('aria-pressed', 'true');
+    load();
+  });
+  return btn;
+}
 async function loadCategories() {
   const res = await fetch('/student/api/categories');
   if (!res.ok) return;
   const cats = await res.json();
-
   const box = document.getElementById('categories');
   box.innerHTML = '';
-  addCategoryButton(box, 'All', null);
-  cats.forEach(c => addCategoryButton(box, c.category_name, c.category_id));
+  box.append(chip('All', null, 'package'), ...cats.map(c => chip(c.category_name, c.category_id, UI.catMeta(c.category_name).icon)));
 }
 
-function addCategoryButton(box, label, id) {
-  const btn = document.createElement('button');
-  btn.textContent = label;
-  btn.className = 'cat-btn' + (id === selectedCategory ? ' active' : '');
-
+// ----- campus buttons -----
+function locButton(label, val) {
+  const btn = h('button', { type: 'button', class: val === selectedLocation ? 'active' : '', text: label });
   btn.addEventListener('click', () => {
-    selectedCategory = id;                                  // remember which category
-    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');                            // highlight this one
-    load();                                                 // reload the list
+    selectedLocation = val;
+    document.querySelectorAll('#location button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    load();
   });
-
-  box.appendChild(btn);
+  return btn;
 }
-// ----- location buttons -----
 async function loadLocation() {
   const res = await fetch('/student/api/location');
   if (!res.ok) return;
   const locs = await res.json();
-
   const box = document.getElementById('location');
   box.innerHTML = '';
-  addLocationButton(box, 'Both Campuses', null);
-  locs.forEach(l => addLocationButton(box, l.location, l.location));
+  box.append(locButton('Both Campuses', null), ...locs.map(l => locButton(l.location, l.location)));
 }
 
-function addLocationButton(box, label, val) {
-  const btn = document.createElement('button');
-  btn.textContent = label;
-  btn.className = 'loc-btn' + (val == selectedLocation ? ' active' : '');
-
-  btn.addEventListener('click', () => {
-    selectedLocation = val;                                  // remember which category
-    document.querySelectorAll('.loc-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');                            // highlight this one
-    load();                                                 // reload the list
-  });
-
-  box.appendChild(btn);
-}
-
-// ----- equipment list -----
+// ----- equipment grid -----
 async function load() {
   const thisCall = ++latestCall;
-
   let url = '/student/api/equipment?q=' + encodeURIComponent(searchBox.value);
   if (selectedCategory !== null) url += '&category=' + selectedCategory;
-  if (selectedLocation != null) url += '&location=' + encodeURIComponent(selectedLocation);
+  if (selectedLocation !== null) url += '&location=' + encodeURIComponent(selectedLocation);
+
   const res = await fetch(url);
   if (thisCall !== latestCall) return;
+  grid.innerHTML = '';
+  if (!res.ok) { message.textContent = 'Could not load equipment'; countEl.textContent = ''; return; }
 
-  table.innerHTML = '';
-  if (!res.ok) { message.textContent = 'Could not load equipment'; return; }
+  let rows = await res.json();
+  if (availableOnly.checked) rows = rows.filter(r => r.available_quantity > 0);
+  countEl.textContent = rows.length + (rows.length === 1 ? ' item' : ' items');
+  message.textContent = '';
 
-  const rows = await res.json();
-  message.textContent = rows.length === 0 ? 'No equipment found' : '';
-  if (rows.length === 0) return;
+  if (rows.length === 0) {
+    grid.append(h('div', { class: 'empty', style: 'grid-column:1/-1' },
+      h('div', { class: 't font-display', text: 'No equipment found' }),
+      'Try clearing the search or choosing a different category.'));
+    return;
+  }
+  rows.forEach(r => grid.append(UI.itemCard(r, openRequestDialog)));
+}
 
-  const head = table.createTHead().insertRow();
-  ['Name', 'Category', 'Id', 'Status','Location','Description',''].forEach(t => {
-    const th = document.createElement('th');
-    th.textContent = t;
-    head.appendChild(th);
-  });
-
-  const body = table.createTBody();
+// ----- sidebar: my active rentals -----
+async function loadActive() {
+  const box = document.getElementById('active');
+  const res = await fetch('/student/api/Mytransaction');
+  if (!res.ok) return;
+  const rows = (await res.json()).filter(r => r.status === 'borrowed' || r.status === 'overdue');
+  document.getElementById('activeCount').textContent = rows.length;
+  box.innerHTML = '';
+  if (rows.length === 0) { box.append(h('div', { class: 'panel-empty', text: 'You have nothing borrowed right now.' })); return; }
   rows.forEach(r => {
-    const tr = body.insertRow();
-    tr.insertCell().textContent = r.name;
-    tr.insertCell().textContent = r.category_name;
-    tr.insertCell().textContent = r.equipment_id;
-    if(r.available_quantity == 0){
-      tr.insertCell().textContent = 'borrowed';
-    }
-    else if(r.status == 'active'){
-      tr.insertCell().textContent = r.status;
-    }
-    tr.insertCell().textContent = r.location;
-    tr.insertCell().textContent = r.description;
-    const actionCell = tr.insertCell();
-    if (r.available_quantity > 0) {
-      const btn = document.createElement('button');
-      btn.textContent = 'Request Rental';
-      btn.addEventListener('click', () => openRequestDialog(r));
-      actionCell.appendChild(btn);
-    } else {
-      actionCell.textContent = 'Borrowed';
-    }
+    const late = r.status === 'overdue';
+    box.append(h('div', { class: 'panel-row' + (late ? ' late' : '') },
+      h('div', { class: 'name', text: r.equipment }),
+      h('div', { class: 'dates' },
+        h('div', {}, h('div', { class: 'mini-label', text: 'Borrowed' }), h('div', { class: 'mini-val', text: UI.fmtDate(r.borrow_date) })),
+        h('div', {}, h('div', { class: 'mini-label', text: 'Due' }),
+          h('div', { class: 'mini-val', style: late ? 'color:#DC2626;font-weight:700' : '', text: UI.fmtDate(r.due_date) }))),
+      h('div', { style: 'display:flex;align-items:center;justify-content:space-between;gap:8px' },
+        UI.badge(late ? 'overdue' : 'available', late ? 'Overdue' : 'Active'),
+        h('a', { class: 'btn btn-danger', href: '/student/my_rental', text: 'Return' }))));
   });
 }
 
-// ----- search form -----
-document.getElementById('searchForm').addEventListener('submit', event => {
-  event.preventDefault();
-  load();
-});
+// ----- filters -----
+document.getElementById('searchForm').addEventListener('submit', e => { e.preventDefault(); load(); });
+let timer;
+searchBox.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(load, 250); });
+availableOnly.addEventListener('change', load);
+document.addEventListener('request-sent', load);
 
-// ----- start -----
 load();
 loadCategories();
 loadLocation();
-
+loadActive();
 </script>
+</body>
+</html>
