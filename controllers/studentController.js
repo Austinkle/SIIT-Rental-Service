@@ -157,3 +157,38 @@ exports.returnTransaction = async (req, res) => {
     throw err;
   }
 };
+
+exports.notificationsPage = (req, res) => res.sendFile(view('notifications'));
+
+exports.getNotifications = async (req, res) => {
+  const [rows] = await db.query(
+    `SELECT notification_id, type, message, created_at, is_read
+       FROM notification
+      WHERE user_id = ?
+      ORDER BY created_at DESC
+      LIMIT 100`, [req.session.user.id]);
+  res.json(rows);
+};
+
+exports.getNotificationCount = async (req, res) => {
+  const [rows] = await db.query(
+    'SELECT COUNT(*) AS n FROM notification WHERE user_id = ? AND is_read = 0',
+    [req.session.user.id]);
+  res.json({ count: rows[0].n });
+};
+
+exports.markNotificationRead = async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid notification' });
+
+  // "AND user_id = ?" means a student can only mark their own notifications
+  await db.query('UPDATE notification SET is_read = 1 WHERE notification_id = ? AND user_id = ?',
+    [id, req.session.user.id]);
+  res.json({ ok: true });
+};
+
+exports.markAllNotificationsRead = async (req, res) => {
+  await db.query('UPDATE notification SET is_read = 1 WHERE user_id = ? AND is_read = 0',
+    [req.session.user.id]);
+  res.json({ ok: true });
+};

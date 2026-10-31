@@ -1,0 +1,84 @@
+<link rel="stylesheet" href="/style.css">
+<body data-role="staff">
+<nav id="nav"></nav>
+
+<h1>Overdue</h1>
+<p>Rentals that were returned after the due date, or are past the due date and not returned yet.</p>
+
+<div id="kinds"></div>
+<table id="overdue" border="1"></table>
+
+<script src="/nav.js"></script>
+<script src="/shared.js"></script>
+<script>
+  const showDate = v => new Date(v).toLocaleDateString();
+  const showDateTime = v => new Date(v).toLocaleString();
+  const DAY = 24 * 60 * 60 * 1000;
+  let kind = 'all';
+
+  // ----- filter buttons: All / Not returned yet / Returned late -----
+  [['all', 'All'], ['not_returned', 'Not returned yet'], ['returned_late', 'Returned late']]
+    .forEach(([value, label]) => {
+      const btn = document.createElement('button');
+      btn.textContent = label;
+      btn.className = 'cat-btn' + (value === kind ? ' active' : '');
+      btn.addEventListener('click', () => {
+        kind = value;
+        document.querySelectorAll('#kinds .cat-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        loadOverdue();
+      });
+      document.getElementById('kinds').appendChild(btn);
+    });
+
+  // ----- table cells -----
+  function returnedCell(r) {
+    return document.createTextNode(r.return_date ? showDateTime(r.return_date) : 'Not returned');
+  }
+
+  function notifiedCell(r) {
+    return document.createTextNode(
+      r.times_notified === 0 ? '-' : r.times_notified + 'x (last: ' + showDateTime(r.last_notified) + ')');
+  }
+
+  function notifyCell(r) {
+    const box = document.createElement('span');
+    const recent = r.last_notified && (Date.now() - new Date(r.last_notified).getTime()) < DAY;
+
+    const btn = document.createElement('button');
+    btn.textContent = 'Notify';
+    btn.disabled = !!recent;
+    btn.title = recent ? 'Already notified in the last 24 hours' : 'Send a notification to the student';
+    btn.addEventListener('click', () => notify(r));
+    box.appendChild(btn);
+    return box;
+  }
+
+  async function notify(r) {
+    if (!confirm('Send a notification to ' + r.student + ' about "' + r.equipment + '"?')) return;
+
+    const res = await fetch('/staff/api/overdue/' + r.transaction_id + '/notify', { method: 'POST' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Could not send the notification');
+    }
+    loadOverdue();       // refresh either way
+  }
+
+  function loadOverdue() {
+    loadTable('/staff/api/overdue?kind=' + kind, 'overdue', [
+      { key: 'equipment',   label: 'Equipment' },
+      { key: 'student',     label: 'Student' },
+      { key: 'location',    label: 'Location' },
+      { key: 'borrow_date', label: 'Borrowed', format: showDate },
+      { key: 'due_date',    label: 'Due',      format: showDate },
+      { label: 'Returned',  render: returnedCell },
+      { key: 'days_late',   label: 'Days late' },
+      { label: 'Notified',  render: notifiedCell },
+      { label: '',          render: notifyCell }
+    ]);
+  }
+
+  loadOverdue();
+  setInterval(loadOverdue, 60000);    // refresh every minute
+</script>
