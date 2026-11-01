@@ -129,7 +129,7 @@
     const fwd  = h('button', { type: 'button', 'aria-label': 'Go forward', onclick: () => history.forward() }, icon('arrow-right', 17));
     if (history.length <= 1) back.disabled = true;
 
-    const mobileItems = role === 'student' ? items : items;
+    const mobileItems = role === 'student' ? items.concat([{ label: 'Profile', href: '/student/profile' }]) : items;   // the avatar icon is hidden on phones, so Profile lives in the menu
     const links = items.map(i => h('a', { href: i.href, class: path === i.href ? 'active' : '', 'data-href': i.href, text: i.label }));
     const mobileLinks = mobileItems.map(i => h('a', { href: i.href, class: path === i.href ? 'active' : '', 'data-href': i.href, text: i.label }));
     const mobileAuth = role === 'guest'

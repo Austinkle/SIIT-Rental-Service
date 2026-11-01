@@ -84,6 +84,12 @@ function isOverdue(r) {
   return r.status === 'overdue' || (r.status === 'borrowed' && new Date(r.due_date) < new Date());
 }
 
+// outlined status chip: coloured round icon + text (green = check, amber = clock, red = x)
+const STATUS_ICON = { green: 'check', amber: 'clock', red: 'x' };
+const statusTag = (kind, label) => h('span', { class: 'status-tag ' + kind },
+  h('span', { class: 'st-ico' }, icon(STATUS_ICON[kind], 10)),
+  label);
+
 // ----- status text the student sees -----
 function statusText(r) {
   if (isOverdue(r)) return 'Overdue - please return it';
@@ -117,7 +123,7 @@ function historyCard(r) {
       h('div', {},
         h('div', { class: 'row-title font-display', text: r.equipment }),
         h('div', { class: 'row-sub' }, h('span', { class: 'mono', text: '#' + r.transaction_id }), ' · ' + r.location)),
-      h('span', { class: 'pill ' + (done ? 'green' : r.flagged ? 'red' : 'amber'), text: statusText(r) })),
+      statusTag(done ? 'green' : r.flagged ? 'red' : 'amber', statusText(r))),
     h('div', { class: 'info-grid' },
       dateBox('Borrowed', fmtDate(r.borrow_date)),
       dateBox('Due date', fmtDate(r.due_date))));
@@ -159,7 +165,7 @@ async function loadRequests() {
         h('div', {},
           h('div', { class: 'row-title font-display', text: r.equipment }),
           h('div', { class: 'row-sub', text: r.location + ' · requested ' + fmtDate(r.request_date) })),
-        h('span', { class: 'pill ' + kind, text: r.status.charAt(0).toUpperCase() + r.status.slice(1) })),
+        statusTag(kind, r.status.charAt(0).toUpperCase() + r.status.slice(1))),
       h('div', { class: 'info-grid', style: 'margin-bottom:0' },
         dateBox('Borrow date', fmtDate(r.borrow_date)),
         dateBox('Due date', fmtDate(r.due_date)))));

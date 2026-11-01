@@ -26,9 +26,9 @@
   <button type="submit" class="btn btn-dark">Search</button>
 </form>
 
-<div id="categories"></div>
+<div id="categories" class="staff-filter"></div>
 <div class="filter-row">
-  <div id="location"></div>
+  <div id="location" class="staff-filter"></div>
   <button type="button" id="addBtn" class="add-btn" style="margin-left: auto; margin-bottom: 10px;">+ Add equipment</button>
 </div>
 
@@ -73,6 +73,16 @@
   </form>
 </dialog>
 
+<!-- Confirm delete -->
+<dialog id="confirmDialog">
+  <h3 class="font-display" id="confirmTitle"></h3>
+  <p id="confirmMsg"></p>
+  <div class="dlg-actions">
+    <button type="button" class="btn btn-outline" id="confirmCancel">Cancel</button>
+    <button type="button" class="btn btn-danger" id="confirmOk">Delete</button>
+  </div>
+</dialog>
+
 <script src="/icons.js"></script>
 <script src="/ui.js"></script>
 <script src="/nav.js"></script>
@@ -89,7 +99,6 @@ function makeButton(label, onClick, cls) {
   const btn = document.createElement('button');
   btn.textContent = label;
   btn.className = cls || 'btn btn-outline';
-  btn.style.marginRight = '6px';
   btn.addEventListener('click', onClick);
   return btn;
 }
@@ -157,7 +166,7 @@ async function send(method, url, body) {
     body: body ? JSON.stringify(body) : undefined
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) alert(data.error || 'Something went wrong');
+  if (!res.ok) UI.toast(data.error || 'Something went wrong', 'error');
   return res.ok;
 }
 
@@ -166,8 +175,30 @@ async function markEquipment(r, action) {          // action: 'borrowed' or 'ava
   load();                                          // refresh either way
 }
 
+// ----- confirm pop-up: askConfirm(...) resolves to true (Delete) or false (Cancel / Esc) -----
+const confirmDlg = document.getElementById('confirmDialog');
+document.getElementById('confirmCancel').addEventListener('click', () => confirmDlg.close());
+
+function askConfirm(title, text, label) {
+  return new Promise(resolve => {
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMsg').textContent = text;      // plain text, so names can never inject HTML
+    document.getElementById('confirmOk').textContent = label;
+    let answer = false;
+    const ok = () => { answer = true; confirmDlg.close(); };
+    document.getElementById('confirmOk').addEventListener('click', ok);
+    confirmDlg.addEventListener('close', () => {
+      document.getElementById('confirmOk').removeEventListener('click', ok);
+      resolve(answer);
+    }, { once: true });
+    confirmDlg.showModal();
+  });
+}
+
 async function deleteEquipment(r) {
-  if (!confirm('Delete "' + r.name + '"? It will disappear from the catalog.')) return;
+  const yes = await askConfirm('Delete equipment',
+    'Delete "' + r.name + '"? It will disappear from the catalog.', 'Delete');
+  if (!yes) return;
   await send('DELETE', '/staff/api/equipment/' + r.equipment_id);
   load();
 }
@@ -191,7 +222,7 @@ async function load() {
   if (rows.length === 0) return;
 
   const head = table.createTHead().insertRow();
-  ['Name', 'Category', 'Id', 'Status', 'Qty', 'Location', 'Description', ''].forEach(t => {
+  ['Name', 'Category', 'Id', 'Status', 'Qty', 'Location', 'Description', '', ''].forEach(t => {
     const th = document.createElement('th');
     th.textContent = t;
     head.appendChild(th);
@@ -211,13 +242,15 @@ async function load() {
     tr.insertCell().textContent = r.description;
 
     const actions = tr.insertCell();
+    const group = UI.h('div', { class: 'cell-actions' });
     if (r.available_quantity > 0)                  // something on the shelf: can mark one as borrowed
-      actions.appendChild(makeButton('Mark borrowed', () => markEquipment(r, 'borrowed')));
+      group.appendChild(makeButton('Mark borrowed', () => markEquipment(r, 'borrowed'), 'btn btn-outline btn-status borrowed'));
     if (r.desk_loans > 0)                          // something lent at the desk: can put it back
-      actions.appendChild(makeButton('Mark available', () => markEquipment(r, 'available')));
+      group.appendChild(makeButton('Mark available', () => markEquipment(r, 'available'), 'btn btn-outline btn-status available'));
+    actions.appendChild(group);
     const actions2 = tr.insertCell();
-    const del = makeButton('X', () => deleteEquipment(r), 'btn btn-danger');
-    del.title = 'Delete equipment';
+    const del = UI.h('button', { type: 'button', class: 'icon-btn danger', title: 'Delete equipment', 'aria-label': 'Delete ' + r.name,
+      onclick: () => deleteEquipment(r) }, UI.icon('trash-2', 16));
     actions2.appendChild(del);
   });
 }

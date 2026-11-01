@@ -86,7 +86,8 @@ async function loadCategories() {
   cats.forEach(c => {
     box.append(h('a', { class: 'cat-tile', href: '/student/rental_catalog?category=' + c.category_id },
       h('span', { class: 'cat-icon' }, icon(UI.catMeta(c.category_name).icon, 22)),
-      h('span', { class: 't', text: c.category_name })));
+      h('span', { class: 't', text: c.category_name }),
+      h('span', { class: 'cat-go' }, icon('arrow-right', 16))));
   });
 }
 

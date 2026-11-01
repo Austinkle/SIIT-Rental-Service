@@ -18,16 +18,16 @@
     <div class="eyebrow font-display">Administration</div>
     <h1 class="font-display">Admin page</h1>
     <p>Manage users, categories and equipment of the SIIT Rental Service.</p>
+    <dl class="hero-stats admin-stats" aria-label="Summary">
+      <div><dd id="stTotal">–</dd><dt>Total users</dt><span class="hs-sub" id="subTotal">&nbsp;</span></div>
+      <div><dd id="stStudent">–</dd><dt>Students</dt><span class="hs-sub" id="subStudent">&nbsp;</span></div>
+      <div><dd id="stStaff">–</dd><dt>Staff</dt><span class="hs-sub" id="subStaff">&nbsp;</span></div>
+      <div><dd id="stEquip">–</dd><dt>Equipment</dt><span class="hs-sub" id="subEquip">&nbsp;</span></div>
+    </dl>
   </div>
 </header>
 
 <div class="page-body narrow">
-  <section class="stat-grid" aria-label="Summary">
-    <div class="stat-card ink"><div class="stat-top"><span class="stat-label">Total users</span><span class="stat-ic" id="icUsers"></span></div><div class="stat-num" id="stTotal">–</div><div class="stat-sub" id="subTotal">&nbsp;</div></div>
-    <div class="stat-card"><div class="stat-top"><span class="stat-label">Students</span><span class="stat-ic" id="icStudents"></span></div><div class="stat-num" id="stStudent">–</div><div class="stat-sub" id="subStudent">&nbsp;</div></div>
-    <div class="stat-card green"><div class="stat-top"><span class="stat-label">Staff</span><span class="stat-ic" id="icStaff"></span></div><div class="stat-num" id="stStaff">–</div><div class="stat-sub" id="subStaff">&nbsp;</div></div>
-    <div class="stat-card amber"><div class="stat-top"><span class="stat-label">Equipment</span><span class="stat-ic" id="icEquip"></span></div><div class="stat-num" id="stEquip">–</div><div class="stat-sub" id="subEquip">&nbsp;</div></div>
-  </section>
 
   <h2 class="sec-title"><span class="t font-display">All users</span></h2>
 
@@ -156,7 +156,6 @@
   const { h, icon, toast } = UI;
   const $ = id => document.getElementById(id);
   const ROLES = [['all', 'All'], ['student', 'Students'], ['staff', 'Staff'], ['admin', 'Admins']];
-  const PILL = { student: 'violet', staff: 'green', admin: 'ink' };
   const EQ_FILTERS = [['all', 'All'], ['active', 'Active'], ['maintenance', 'Maintenance'], ['retired', 'Retired'], ['removed', 'Removed']];
   const EQ_STATUSES = ['active', 'maintenance', 'retired'];
   const cap = v => v.charAt(0).toUpperCase() + v.slice(1);
@@ -175,7 +174,7 @@
       body: body ? JSON.stringify(body) : undefined
     });
     const data = await res.json().catch(() => ({}));
-    return { ok: res.ok, data };
+    return { ok: res.ok, status: res.status, data };
   }
   function showError(el, msg) { el.textContent = msg; el.hidden = false; }
 
@@ -229,10 +228,6 @@
   }
 
   // icons in the stat cards + search boxes
-  $('icUsers').append(icon('inbox', 17));
-  $('icStudents').append(icon('book-open', 17));
-  $('icStaff').append(icon('clipboard-check', 17));
-  $('icEquip').append(icon('package', 17));
   $('searchBox').prepend(icon('search', 16));
   $('eqSearchBox').prepend(icon('search', 16));
 
@@ -257,7 +252,7 @@
     if (!rows.length) { table.createCaption().textContent = users.length ? 'No users match your search' : 'No data'; return; }
 
     const head = table.createTHead().insertRow();
-    ['Name', 'User ID', 'Email', 'Role', 'Student / Staff ID'].forEach(l => head.append(h('th', { text: l })));
+    ['Name', 'User ID', 'Email', 'Role', 'Student / Staff ID', ''].forEach(l => head.append(h('th', { text: l })));
 
     const body = table.createTBody();
     rows.forEach(u => {
@@ -269,13 +264,13 @@
           h('span', { class: 'user-name', text: u.first_name + ' ' + u.last_name }))),
         h('td', { class: 'id-cell', text: '#' + u.user_id }),
         h('td', { class: 'cell-muted', text: u.email }),
-        h('td', {}, h('span', { class: 'pill ' + (PILL[u.user_type] || ''), text: u.user_type })),
+        h('td', {}, h('span', { class: 'user-role ' + u.user_type, text: u.user_type })),
          h('td', { class: 'id-cell' + (rid ? ' has-id' : ''), text: rid ? String(rid) : '—' }),
         h('td', { class: 'x-cell' }, u.user_type === 'admin' ? null : h('button', {
           type: 'button', class: 'icon-btn danger', title: 'Delete ' + u.email,
           'aria-label': 'Delete account of ' + u.first_name + ' ' + u.last_name,
           onclick: () => askDeleteUser(u)
-        }, icon('x', 16))));
+        }, icon('trash-2', 16))));
     });
   }
 
@@ -381,7 +376,7 @@
       if (!cats.length) { table.createCaption().textContent = 'No categories yet'; return; }
 
       const head = table.createTHead().insertRow();
-      ['Category', 'Equipment'].forEach(l => head.append(h('th', { text: l })));
+      ['Category', 'Equipment', ''].forEach(l => head.append(h('th', { text: l })));
       const body = table.createTBody();
       cats.forEach(c => {
         const tr = body.insertRow();
@@ -394,7 +389,7 @@
             type: 'button', class: 'icon-btn danger', title: 'Delete ' + c.category_name,
             'aria-label': 'Delete category ' + c.category_name,
             onclick: () => askDeleteCategory(c)
-          }, icon('x', 16))));
+          }, icon('trash-2', 16))));
       });
     } catch {
       table.createCaption().textContent = 'Could not load categories';
@@ -479,7 +474,7 @@
     if (!rows.length) { table.createCaption().textContent = equipment.length ? 'No equipment matches your filter' : 'No equipment yet'; return; }
 
     const head = table.createTHead().insertRow();
-    ['Equipment', 'Category', 'Location', 'In stock', 'Status'].forEach(l => head.append(h('th', { text: l })));
+    ['Equipment', 'Category', 'Location', 'In stock', 'Status', ''].forEach(l => head.append(h('th', { text: l })));
 
     const body = table.createTBody();
     rows.forEach(e => {
@@ -499,7 +494,7 @@
         h('td', { class: 'x-cell' }, removed ? null : h('button', {
           type: 'button', class: 'icon-btn danger', title: 'Remove ' + e.name, 'aria-label': 'Remove ' + e.name,
           onclick: () => askDelete(e)
-        }, icon('x', 16))));
+        }, icon('trash-2', 16))));
     });
   }
 
@@ -538,7 +533,7 @@
     if (!$('eCat').value) return showError($('eqError'), 'Add a category first, then try again.');
     btn.disabled = true;
     try {
-      const { ok, data } = await send('POST', '/admin/api/equipment', {
+      const { ok, status, data } = await send('POST', '/admin/api/equipment', {
         name: $('eName').value,
         category_id: $('eCat').value,
         location: $('eLoc').value,
@@ -551,7 +546,7 @@
         loadEquipment();
         loadCategories();      // refresh the per-category counts
       } else {
-        showError($('eqError'), data.error || 'Could not add the equipment');
+        showError($('eqError'), data.error || (status >= 500 ? 'Server error (' + status + '). Check the terminal running the server for the cause.' : 'Could not add the equipment'));
       }
     } catch {
       showError($('eqError'), 'Network error. Please try again.');
