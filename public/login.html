@@ -55,11 +55,15 @@
           </div>
         </div>
         <div id="registered" class="success" role="status" hidden>Account created. You can sign in now.</div>
+         <div id="notice" class="notice" role="status" hidden></div>
+        <div id="denied" class="error" role="alert" hidden></div>
         <!-- แสดงเมื่อ server redirect กลับมาพร้อม ?error=1 -->
         <div id="error" class="error" role="alert" hidden>Wrong email or password</div>
 
         <button type="submit" id="submitBtn" class="submit">Sign in</button>
         <a class="secondary" href="/signup.html">Create a student account</a>
+        <a class="secondary ghost" href="/student/home">Browse equipment without signing in</a>
+        
 
         <p class="note">Restricted to verified Thammasat University (SIIT) students and staff.</p>
       </form>
@@ -84,6 +88,23 @@
 
     if (new URLSearchParams(location.search).has('registered')) {
       document.getElementById('registered').hidden = false;
+    }
+
+        const params = new URLSearchParams(location.search);
+
+    if (params.get('login') === 'required') {
+      const n = document.getElementById('notice');
+      n.textContent = 'You have to log in first.';
+      n.hidden = false;
+    }
+
+    const reason = params.get('reason');
+    if (reason === 'in-use' || reason === 'other-device') {
+      const d = document.getElementById('denied');
+      d.textContent = reason === 'in-use'
+        ? 'Access denied. This account is already signed in on another browser or device.'
+        : 'Access denied. This account was signed in on another browser or device, so this session has ended.';
+      d.hidden = false;
     }
 
     // กันกดซ้ำตอนกำลังส่งฟอร์ม

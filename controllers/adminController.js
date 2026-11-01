@@ -211,3 +211,21 @@ exports.deleteUser = async (req, res) => {
     throw err;
   }
 };
+
+exports.deleteCategory = async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1)
+    return res.status(400).json({ error: 'Invalid category' });
+
+  try {
+    const [result] = await db.query('DELETE FROM category WHERE category_id = ?', [id]);
+    if (result.affectedRows === 0)
+      return res.status(404).json({ error: 'Category not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.errno === 1451)
+      return res.status(409).json({
+        error: 'This category still has equipment (deleted items are kept for history), so it cannot be deleted' });
+    throw err;
+  }
+};

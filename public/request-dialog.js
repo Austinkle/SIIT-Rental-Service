@@ -57,6 +57,11 @@
 
   // Called by the page when the student clicks "Request Rental"
   window.openRequestDialog = function (item) {
+    // not logged in: go to the login page instead of opening the pop-up
+    if (document.body.dataset.role === 'guest') {
+      location.href = '/login.html?login=required';
+      return;
+    }
     selected = item;
     document.getElementById('dlgItem').textContent = item.name;
     document.getElementById('dlgLocation').textContent = item.location ? 'Pick up at: ' + item.location : '';

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Profile · SIIT Rental Service</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body data-role="student">
+<nav id="nav"></nav>
+
+<header class="page-header">
+  <div>
+    <div class="eyebrow font-display">Student Account</div>
+    <h1 class="font-display">My Profile</h1>
+    <p>Your personal information and rental summary.</p>
+  </div>
+</header>
+
+<div class="page-body reading">
+  <div id="profile"><div class="empty">Loading…</div></div>
+</div>
+
+<footer id="footer"></footer>
+
+<script src="/icons.js"></script>
+<script src="/ui.js"></script>
+<script src="/nav.js"></script>
+<script>
+const { h } = UI;
+
+// "—" for anything the student has not filled in
+const dash = v => (v === null || v === undefined || v === '') ? '—' : String(v);
+const initials = p => ((p.first_name || '')[0] || '') + ((p.last_name || '')[0] || '');
+const money = v => Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' THB';
+
+const AVATAR_STYLE = 'width:56px;height:56px;border-radius:50%;display:flex;align-items:center;' +
+  'justify-content:center;background:#EDE9FE;color:#6D28D9;font-weight:700;font-size:20px;flex:none';
+
+const infoBox = (label, value, kind) => h('div', { class: 'info ' + (kind || '') },
+  h('div', { class: 'k', text: label }), h('div', { class: 'v', text: value }));
+
+async function loadProfile() {
+  const box = document.getElementById('profile');
+  const res = await fetch('/student/api/profile');
+  box.replaceChildren();
+
+  if (!res.ok) {
+    box.append(h('div', { class: 'empty', text: 'Could not load your profile' }));
+    return;
+  }
+  const p = await res.json();
+  const owes = Number(p.unpaid_penalties) > 0;
+
+  box.append(
+    // ----- personal information -----
+    h('section', { class: 'sec-block' },
+      h('div', { class: 'sec-title' }, h('span', { class: 't font-display', text: 'Personal Information' })),
+      h('div', { class: 'row-card' },
+        h('div', { class: 'row-top' },
+          h('div', { style: 'display:flex;align-items:center;gap:14px' },
+            h('div', { style: AVATAR_STYLE, text: initials(p).toUpperCase() }),
+            h('div', {},
+              h('div', { class: 'row-title font-display', text: p.first_name + ' ' + p.last_name }),
+              h('div', { class: 'row-sub' }, h('span', { class: 'mono', text: dash(p.student_id) })))),
+          h('span', { class: 'pill violet', text: 'Student' })),
+        h('div', { class: 'info-grid', style: 'margin-bottom:0' },
+          infoBox('Email', p.email),
+          infoBox('Phone', dash(p.phone)),
+          infoBox('Student ID', dash(p.student_id)),
+          infoBox('Major', dash(p.major)),
+          infoBox('Year', p.year ? 'Year ' + p.year : '—')))),
+
+    // ----- rental summary -----
+    h('section', { class: 'sec-block' },
+      h('div', { class: 'sec-title' }, h('span', { class: 't font-display', text: 'Rental Summary' })),
+      h('div', { class: 'row-card' },
+        h('div', { class: 'info-grid', style: 'margin-bottom:0' },
+          infoBox('Borrowing now', String(p.borrowing_now)),
+          infoBox('Total rentals', String(p.total_rentals)),
+          infoBox('Pending requests', String(p.pending_requests)),
+          infoBox('Unpaid penalties', owes ? money(p.unpaid_penalties) : 'None', owes ? 'red' : '')))),
+
+    // ----- shortcuts -----
+    h('div', { style: 'text-align:center;display:flex;gap:10px;justify-content:center;flex-wrap:wrap' },
+      h('a', { class: 'btn btn-dark', href: '/student/my_rental', text: 'View my rentals' }),
+      h('a', { class: 'btn btn-outline', href: '/student/rental_catalog', text: 'Browse equipment' })));
+}
+
+loadProfile();
+</script>
+</body>
+</html>
