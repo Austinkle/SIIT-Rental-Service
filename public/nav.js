@@ -26,6 +26,7 @@
   let path = location.pathname.replace(/\/$/, '');
   if (path === '/student') path = '/student/home';
   if (path === '/staff') path = '/staff/requests';
+  if (path.startsWith('/student/item/')) path = '/student/rental_catalog';   // item detail belongs to the catalog
 
   // Orca mark artwork
   function orca(size) {
@@ -111,7 +112,7 @@
     const fwd  = h('button', { type: 'button', 'aria-label': 'Go forward', onclick: () => history.forward() }, icon('arrow-right', 17));
     if (history.length <= 1) back.disabled = true;
 
-    const mobileItems = role === 'student' ? items.concat([{ label: 'Notifications', href: '/student/notifications' }]) : items;
+    const mobileItems = role === 'student' ? items.concat([{ label: 'Notifications', href: '/student/notifications' }, { label: 'Profile', href: '/student/profile' }]) : items;
     const links = items.map(i => h('a', { href: i.href, class: path === i.href ? 'active' : '', 'data-href': i.href, text: i.label }));
     const mobileLinks = mobileItems.map(i => h('a', { href: i.href, class: path === i.href ? 'active' : '', 'data-href': i.href, text: i.label }));
     const mobile = h('div', { class: 'mobile-menu' }, mobileLinks, h('a', { href: '/logout', class: 'danger', text: 'Sign out' }));
@@ -130,6 +131,7 @@
         h('div', { class: 'nav-links' }, links),
         h('div', { class: 'nav-right' },
           role === 'student' ? buildBell() : null,
+          role === 'student' ? h('a', { class: 'avatar-btn' + (path === '/student/profile' ? ' active' : ''), href: '/student/profile', 'aria-label': 'My profile', title: 'My profile' }, icon('user', 18)) : null,
           h('a', { class: 'btn-signout', href: '/logout' }, icon('log-out', 14), 'Sign out'),
           toggle)),
       mobile);

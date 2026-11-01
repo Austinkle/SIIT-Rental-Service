@@ -73,7 +73,8 @@
   function itemCard(r, onRequest) {
     const meta = catMeta(r.category_name);
     const free = r.available_quantity > 0;
-    const img = h('div', { class: 'item-img' + (free ? '' : ' dim') });
+    const detailHref = '/student/item/' + r.equipment_id;
+    const img = h('a', { class: 'item-img' + (free ? '' : ' dim'), href: detailHref, 'aria-label': 'View ' + r.name });
     if (meta.img) {
       const pic = h('img', { src: meta.img, alt: '', loading: 'lazy' });
       pic.addEventListener('error', () => pic.remove());
@@ -88,12 +89,14 @@
     return h('div', { class: 'item-card' }, img,
       h('div', { class: 'item-body' },
         h('div', { class: 'item-cat', text: r.category_name }),
-        h('div', { class: 'item-title font-display', text: r.name }),
+        h('a', { class: 'item-title font-display', href: detailHref, text: r.name }),
         r.description ? h('p', { class: 'item-desc', text: r.description }) : null,
         h('div', { class: 'item-meta' }, icon('map-pin', 12), r.location || '',
           ' · ', r.available_quantity + ' of ' + r.total_quantity + ' in'),
         free
-          ? h('button', { class: 'btn btn-dark btn-block', type: 'button', onclick: () => onRequest(r), text: 'Request Rental' })
+          ? h('div', { class: 'card-actions' },
+              h('button', { class: 'btn btn-dark', type: 'button', onclick: () => onRequest(r), text: 'Request Rental' }),
+              h('a', { class: 'btn btn-outline', href: detailHref, text: 'Details' }))
           : h('div', { class: 'notice-amber', text: 'Currently borrowed' })));
   }
 
