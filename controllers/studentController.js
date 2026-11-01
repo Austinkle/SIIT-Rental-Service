@@ -6,9 +6,28 @@ const MAX_ADVANCE_DAYS = 14;   // how far ahead a student may book
 const MAX_LOAN_DAYS = 7;       // longest allowed loan
 const DAY = 24 * 60 * 60 * 1000;
 const CONDITIONS = ['Good', 'Minor Wear', 'Damage'];
+
+const fs = require('fs');
+
+// Serves a page to guests and students. The page's <body> gets data-role="guest" or "student".
+function servePublicPage(name) {
+  const file = view(name);
+  return (req, res, next) => {
+    const user = req.session.user;
+    if (user && user.role !== 'student') return res.status(403).send('Not allowed');   // staff/admin as before
+
+    fs.readFile(file, 'utf8', (err, html) => {
+      if (err) return next(err);
+      const role = user ? 'student' : 'guest';
+      res.set('Cache-Control', 'no-store');          // the page differs for guests and students
+      res.type('html').send(html.replace('data-role="student"', 'data-role="' + role + '"'));
+    });
+  };
+}
+
 // ----- pages -----
-exports.homePage = (req, res) => res.sendFile(view('home'));
-exports.rental_catalog_Page = (req, res) => res.sendFile(view('rental_catalog'));
+exports.homePage = servePublicPage('home');
+exports.rental_catalog_Page = servePublicPage('rental_catalog');
 exports.my_rental_Page = (req, res) => res.sendFile(view('my_rental'));
 
 
@@ -193,4 +212,26 @@ exports.markAllNotificationsRead = async (req, res) => {
   await db.query('UPDATE notification SET is_read = 1 WHERE user_id = ? AND is_read = 0',
     [req.session.user.id]);
   res.json({ ok: true });
+};
+
+exports.profilePage = (req, res) => res.sendFile(view('profile'));
+
+exports.getProfile = async (req, res) => {
+  const [rows] = await db.query(
+    `SELECT u.first_name, u.last_name, u.email, u.phone,
+            s.student_id, s.major, s.year,
+            (SELECT COUNT(*) FROM borrow_transaction bt
+              WHERE bt.borrower_id = u.user_id AND bt.status IN ('borrowed', 'overdue')) AS borrowing_now,
+            (SELECT COUNT(*) FROM borrow_transaction bt
+              WHERE bt.borrower_id = u.user_id) AS total_rentals,
+            (SELECT COUNT(*) FROM borrow_request br
+              WHERE br.user_id = u.user_id AND br.status = 'pending') AS pending_requests,
+            (SELECT COALESCE(SUM(p.amount), 0) FROM penalty p
+              WHERE p.user_id = u.user_id AND p.paid_status = 'unpaid') AS unpaid_penalties
+       FROM \`user\` u
+       JOIN student s ON s.user_id = u.user_id
+      WHERE u.user_id = ?`, [req.session.user.id]);
+
+  if (!rows.length) return res.status(404).json({ error: 'Profile not found' });
+  res.json(rows[0]);
 };

@@ -139,6 +139,15 @@
   </form>
 </dialog>
 
+<dialog id="confirmDialog">
+  <h3 class="font-display" id="confirmTitle"></h3>
+  <p id="confirmMsg"></p>
+  <div class="dlg-actions">
+    <button type="button" class="btn btn-outline" id="confirmCancel">Cancel</button>
+    <button type="button" class="btn btn-danger" id="confirmOk">Delete</button>
+  </div>
+</dialog>
+
 <script src="/icons.js"></script>
 <script src="/ui.js"></script>
 <script src="/nav.js"></script>
@@ -169,6 +178,55 @@
     return { ok: res.ok, data };
   }
   function showError(el, msg) { el.textContent = msg; el.hidden = false; }
+
+  // ----- confirm pop-up: askConfirm(...) resolves to true (Delete) or false (Cancel / Esc) -----
+  const confirmDlg = $('confirmDialog');
+  $('confirmCancel').addEventListener('click', () => confirmDlg.close());
+
+  function askConfirm(title, text, label) {
+    return new Promise(resolve => {
+      $('confirmTitle').textContent = title;
+      $('confirmMsg').textContent = text;            // plain text, so names can never inject HTML
+      $('confirmOk').textContent = label;
+      let answer = false;
+      const ok = () => { answer = true; confirmDlg.close(); };
+      $('confirmOk').addEventListener('click', ok);
+      confirmDlg.addEventListener('close', () => {
+        $('confirmOk').removeEventListener('click', ok);
+        resolve(answer);
+      }, { once: true });
+      confirmDlg.showModal();
+    });
+  }
+
+  // ----- delete an account -----
+  async function askDeleteUser(u) {
+    const who = u.first_name + ' ' + u.last_name + ' (' + u.email + ')';
+    const yes = await askConfirm('Delete account',
+      'Delete the account of ' + who + '? This cannot be undone.', 'Delete');
+    if (!yes) return;
+    try {
+      const { ok, data } = await send('DELETE', '/admin/api/users/' + u.user_id);
+      if (ok) { toast('Account deleted.'); loadUsers(); }
+      else toast(data.error || 'Could not delete this account', 'error');
+    } catch {
+      toast('Network error. Please try again.', 'error');
+    }
+  }
+
+  // ----- delete a category -----
+  async function askDeleteCategory(c) {
+    const yes = await askConfirm('Delete category',
+      'Delete the category "' + c.category_name + '"?', 'Delete');
+    if (!yes) return;
+    try {
+      const { ok, data } = await send('DELETE', '/admin/api/categories/' + c.category_id);
+      if (ok) { toast('Category deleted.'); loadCategories(); }
+      else toast(data.error || 'Could not delete this category', 'error');
+    } catch {
+      toast('Network error. Please try again.', 'error');
+    }
+  }
 
   // icons in the stat cards + search boxes
   $('icUsers').append(icon('inbox', 17));
@@ -212,7 +270,12 @@
         h('td', { class: 'id-cell', text: '#' + u.user_id }),
         h('td', { class: 'cell-muted', text: u.email }),
         h('td', {}, h('span', { class: 'pill ' + (PILL[u.user_type] || ''), text: u.user_type })),
-        h('td', { class: 'id-cell' + (rid ? ' has-id' : ''), text: rid ? String(rid) : '—' }));
+         h('td', { class: 'id-cell' + (rid ? ' has-id' : ''), text: rid ? String(rid) : '—' }),
+        h('td', { class: 'x-cell' }, u.user_type === 'admin' ? null : h('button', {
+          type: 'button', class: 'icon-btn danger', title: 'Delete ' + u.email,
+          'aria-label': 'Delete account of ' + u.first_name + ' ' + u.last_name,
+          onclick: () => askDeleteUser(u)
+        }, icon('x', 16))));
     });
   }
 
@@ -326,7 +389,12 @@
           h('td', {}, h('div', { class: 'user-cell' },
             h('span', { class: 'avatar', 'aria-hidden': 'true' }, icon(UI.catMeta(c.category_name).icon, 16)),
             h('span', { class: 'user-name', text: c.category_name }))),
-          h('td', { class: 'id-cell has-id', text: String(c.equipment_count) + (Number(c.equipment_count) === 1 ? ' item' : ' items') }));
+           h('td', { class: 'id-cell has-id', text: String(c.equipment_count) + (Number(c.equipment_count) === 1 ? ' item' : ' items') }),
+          h('td', { class: 'x-cell' }, Number(c.equipment_count) > 0 ? null : h('button', {
+            type: 'button', class: 'icon-btn danger', title: 'Delete ' + c.category_name,
+            'aria-label': 'Delete category ' + c.category_name,
+            onclick: () => askDeleteCategory(c)
+          }, icon('x', 16))));
       });
     } catch {
       table.createCaption().textContent = 'Could not load categories';

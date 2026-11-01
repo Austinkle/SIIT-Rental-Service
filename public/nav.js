@@ -1,12 +1,25 @@
 (function () {
+  // Any request answered with 401 means "your session is not valid": go to the login page.
+  const realFetch = window.fetch;
+  window.fetch = async (...args) => {
+    const res = await realFetch(...args);
+    if (res.status === 401 && document.body.dataset.role !== 'guest') {
+      let reason = '';
+      try { reason = (await res.clone().json()).reason || ''; } catch { /* not JSON */ }
+      location.href = '/login.html?' + (reason === 'other-device' ? 'reason=other-device' : 'login=required');
+    }
+    return res;
+  };
+
   const { h, icon, fmtDateTime } = UI;
   const role = document.body.dataset.role;
+  const studentLook = role === 'student' || role === 'guest';   // guests get the student look
 
   const menus = {
     student: [
       { label: 'Home',           href: '/student/home' },
       { label: 'Rental Catalog', href: '/student/rental_catalog' },
-      { label: 'My Rental',      href: '/student/my_rental' }
+      { label: 'My Rental',      href: '/student/my_rental' },
     ],
     staff: [
       { label: 'Requests',    href: '/staff/requests' },
@@ -16,6 +29,10 @@
     ],
     admin: [
       { label: 'Home', href: '/admin' }
+    ],
+    guest: [
+      { label: 'Home',           href: '/student/home' },
+      { label: 'Rental Catalog', href: '/student/rental_catalog' }
     ]
   };
 
@@ -106,18 +123,41 @@
   // ----- top bar -----
   const nav = document.getElementById('nav');
   if (nav) {
-    nav.className = 'navbar' + (role === 'student' ? '' : ' staff');
+    nav.className = 'navbar' + (studentLook ? '' : ' staff');
 
     const back = h('button', { type: 'button', 'aria-label': 'Go back', onclick: () => history.back() }, icon('arrow-left', 17));
     const fwd  = h('button', { type: 'button', 'aria-label': 'Go forward', onclick: () => history.forward() }, icon('arrow-right', 17));
     if (history.length <= 1) back.disabled = true;
 
-    const mobileItems = role === 'student' ? items.concat([{ label: 'Notifications', href: '/student/notifications' }, { label: 'Profile', href: '/student/profile' }]) : items;
+    const mobileItems = role === 'student' ? items : items;
     const links = items.map(i => h('a', { href: i.href, class: path === i.href ? 'active' : '', 'data-href': i.href, text: i.label }));
     const mobileLinks = mobileItems.map(i => h('a', { href: i.href, class: path === i.href ? 'active' : '', 'data-href': i.href, text: i.label }));
-    const mobile = h('div', { class: 'mobile-menu' }, mobileLinks, h('a', { href: '/logout', class: 'danger', text: 'Sign out' }));
+    const mobileAuth = role === 'guest'
+      ? [h('a', { href: '/login.html', text: 'Sign in' }), h('a', { href: '/signup.html', text: 'Create account' })]
+      : h('a', { href: '/logout', class: 'danger', text: 'Sign out' });
+    const mobile = h('div', { class: 'mobile-menu' }, mobileLinks, mobileAuth);
     const toggle = h('button', { type: 'button', class: 'menu-toggle', 'aria-label': 'Menu', 'aria-expanded': 'false',
       onclick: () => { const o = mobile.classList.toggle('open'); toggle.setAttribute('aria-expanded', o); } }, icon('menu', 18, 2));
+
+    // Construct right-hand navigation elements according to role
+    let navRightElements = [];
+    if (role === 'guest') {
+      navRightElements = [
+        h('a', { class: 'btn-signout', href: '/login.html' }, icon('user', 14), 'Sign in'),
+        h('a', { class: 'btn-signout', href: '/signup.html' }, 'Create account'),
+        toggle
+      ];
+    } else if (role === 'student') {
+      const bell = buildBell();
+      const profileBtn = h('a', { class: 'avatar-btn' + (path === '/student/profile' ? ' active' : ''), href: '/student/profile', 'aria-label': 'Profile' }, icon('user', 18));
+      const signOutBtn = h('a', { class: 'btn-signout', href: '/logout' }, icon('log-out', 14), 'Sign out');
+      navRightElements = [bell, profileBtn, signOutBtn, toggle];
+    } else {
+      navRightElements = [
+        h('a', { class: 'btn-signout', href: '/logout' }, icon('log-out', 14), 'Sign out'),
+        toggle
+      ];
+    }
 
     nav.append(
       h('div', { class: 'nav-inner' },
@@ -126,14 +166,10 @@
           h('div', { class: 'brand-mark' }, orca(22)),
           h('div', {},
             h('div', { class: 'brand-name font-display', text: 'SIIT Rental Service' }),
-            role === 'student' ? h('div', { class: 'brand-sub', text: 'Library Equipment Rentals · Rangsit & Bangkadi' }) : null)),
-        role !== 'student' ? h('span', { class: 'role-tag font-display', text: role.toUpperCase() }) : null,
+            studentLook ? h('div', { class: 'brand-sub', text: 'Library Equipment Rentals · Rangsit & Bangkadi' }) : null)),
+        !studentLook ? h('span', { class: 'role-tag font-display', text: role.toUpperCase() }) : null,
         h('div', { class: 'nav-links' }, links),
-        h('div', { class: 'nav-right' },
-          role === 'student' ? buildBell() : null,
-          role === 'student' ? h('a', { class: 'avatar-btn' + (path === '/student/profile' ? ' active' : ''), href: '/student/profile', 'aria-label': 'My profile', title: 'My profile' }, icon('user', 18)) : null,
-          h('a', { class: 'btn-signout', href: '/logout' }, icon('log-out', 14), 'Sign out'),
-          toggle)),
+        h('div', { class: 'nav-right' }, navRightElements)),
       mobile);
   }
 
@@ -163,7 +199,7 @@
         }
         if (notifRes && notifRes.ok) {
           const { count } = await notifRes.json();
-          showBadge('/student/notifications', count, false);   // number on the mobile-menu link
+          showBadge('/student/notifications', count, false);   // number on the menu link
           if (bellDot) bellDot.hidden = count === 0;           // red dot on the bell
         }
       } else if (role === 'staff') {

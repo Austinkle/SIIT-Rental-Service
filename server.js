@@ -6,6 +6,7 @@ const path = require('path');
 const db = require('./db');
 const wrap = require('./middleware/wrap');
 const auth = require('./controllers/authController');
+const sessions = require('./middleware/singleSession');
 
 const app = express();
 
@@ -45,7 +46,7 @@ app.get('/', (req, res) => {
 
 app.post('/signup', signupLimiter, wrap(auth.signup));
 
-app.post('/login', loginLimiter, wrap(async (req, res) => {
+app.post('/login', loginLimiter, wrap(async (req, res, next) => {
   const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
   const password = typeof req.body.password === 'string' ? req.body.password : '';
   if (!email || !password) return res.redirect('/login.html?error=1');
@@ -59,11 +60,27 @@ app.post('/login', loginLimiter, wrap(async (req, res) => {
     return res.redirect('/login.html?error=1');
   }
 
-  req.session.user = { id: user.user_id, role: user.user_type };
-  res.redirect('/' + user.user_type);
+  // Only now (the password was right) do we say whether the account is in use,
+  // so nobody can find out without knowing the password.
+  if (!sessions.canLogin(user.user_id, req.sessionID)) {
+    return res.redirect('/login.html?reason=in-use');
+  }
+
+  // this browser might be signed in as somebody else: let that account go first
+  if (req.session.user) sessions.release(req.session.user.id, req.sessionID);
+
+  // a fresh session id at login (protects against session fixation)
+  req.session.regenerate(err => {
+    if (err) return next(err);
+    req.session.user = { id: user.user_id, role: user.user_type };
+    sessions.claim(user.user_id, req.sessionID);
+    res.redirect('/' + user.user_type);
+  });
 }));
 
 app.get('/logout', (req, res) => {
+  const u = req.session.user;
+  if (u) sessions.release(u.id, req.sessionID);       // free the account for the next login
   req.session.destroy(() => res.redirect('/login.html'));
 });
 

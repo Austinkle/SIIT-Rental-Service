@@ -130,3 +130,20 @@ body.login-body {
   text-align: center; text-decoration: none; font-weight: 600; font-size: 14px;
 }
 .secondary:hover { background: #f4ebfc; }
+
+.notice {
+  margin-bottom: 16px; padding: 10px 12px; border-left: 3px solid #D97706;
+  background: #FFFBEB; color: #92400E; font-size: 12px; line-height: 1.5;
+}
+.notice[hidden] { display: none; }
+
+.secondary.ghost {
+  border-color: transparent;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin-top: 12px;
+  padding: 5px;
+
+}
+.secondary.ghost:hover { background: #E2E8F0; color: var(--primary); }
