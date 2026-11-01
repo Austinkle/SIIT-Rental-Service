@@ -12,17 +12,7 @@
 <body data-role="student">
 <nav id="nav"></nav>
 
-<header class="page-header">
-  <div>
-    <div class="eyebrow font-display">Student Account</div>
-    <h1 class="font-display">My Profile</h1>
-    <p>Your personal information and rental summary.</p>
-  </div>
-</header>
-
-<div class="page-body reading">
-  <div id="profile"><div class="empty">Loading…</div></div>
-</div>
+<div id="profile"><section class="section"><div class="empty">Loading…</div></section></div>
 
 <footer id="footer"></footer>
 
@@ -30,18 +20,24 @@
 <script src="/ui.js"></script>
 <script src="/nav.js"></script>
 <script>
-const { h } = UI;
+const { h, icon } = UI;
 
 // "—" for anything the student has not filled in
 const dash = v => (v === null || v === undefined || v === '') ? '—' : String(v);
 const initials = p => ((p.first_name || '')[0] || '') + ((p.last_name || '')[0] || '');
-const money = v => Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' THB';
+const money = v => Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const AVATAR_STYLE = 'width:56px;height:56px;border-radius:50%;display:flex;align-items:center;' +
-  'justify-content:center;background:#EDE9FE;color:#6D28D9;font-weight:700;font-size:20px;flex:none';
+// one white bordered tile, same look as the category tiles on the home page
+const tile = (iconName, label, value, wide) => h('div', { class: 'profile-tile' + (wide ? ' wide' : '') },
+  h('span', { class: 'cat-icon' }, icon(iconName, 22)),
+  h('div', { class: 'tile-text' },
+    h('div', { class: 'k', text: label }),
+    h('div', { class: 'v', text: value })));
 
-const infoBox = (label, value, kind) => h('div', { class: 'info ' + (kind || '') },
-  h('div', { class: 'k', text: label }), h('div', { class: 'v', text: value }));
+// one big number in the hero, same look as the home page stats
+const stat = (label, value, bad) => h('div', {},
+  h('dd', { text: value, style: bad ? 'color:#FCA5A5' : '' }),
+  h('dt', { text: label }));
 
 async function loadProfile() {
   const box = document.getElementById('profile');
@@ -49,45 +45,51 @@ async function loadProfile() {
   box.replaceChildren();
 
   if (!res.ok) {
-    box.append(h('div', { class: 'empty', text: 'Could not load your profile' }));
+    box.append(h('section', { class: 'section' }, h('div', { class: 'empty', text: 'Could not load your profile' })));
     return;
   }
   const p = await res.json();
   const owes = Number(p.unpaid_penalties) > 0;
 
   box.append(
-    // ----- personal information -----
-    h('section', { class: 'sec-block' },
-      h('div', { class: 'sec-title' }, h('span', { class: 't font-display', text: 'Personal Information' })),
-      h('div', { class: 'row-card' },
-        h('div', { class: 'row-top' },
-          h('div', { style: 'display:flex;align-items:center;gap:14px' },
-            h('div', { style: AVATAR_STYLE, text: initials(p).toUpperCase() }),
-            h('div', {},
-              h('div', { class: 'row-title font-display', text: p.first_name + ' ' + p.last_name }),
-              h('div', { class: 'row-sub' }, h('span', { class: 'mono', text: dash(p.student_id) })))),
-          h('span', { class: 'pill violet', text: 'Student' })),
-        h('div', { class: 'info-grid', style: 'margin-bottom:0' },
-          infoBox('Email', p.email),
-          infoBox('Phone', dash(p.phone)),
-          infoBox('Student ID', dash(p.student_id)),
-          infoBox('Major', dash(p.major)),
-          infoBox('Year', p.year ? 'Year ' + p.year : '—')))),
+    // ----- hero: who you are + rental summary numbers -----
+    h('section', { class: 'hero profile-hero' },
+      h('div', { class: 'hero-grid' },
+        h('div', { style: 'min-width:0' },
+          h('div', { class: 'eyebrow font-display', text: 'Student Account' }),
+          h('div', { class: 'profile-id' },
+            h('div', { class: 'avatar-lg', text: initials(p).toUpperCase() }),
+            h('h1', { class: 'font-display profile-name', 'aria-label': p.first_name + ' ' + p.last_name },
+              h('span', { class: 'pn-first', text: p.first_name }),
+              h('span', { class: 'pn-last', text: p.last_name })),
+            h('div', { class: 'profile-meta' },
+              h('div', {}, h('span', { class: 'k', text: 'Role' }), h('span', { class: 'v', text: 'Student' })),
+              h('div', {}, h('span', { class: 'k', text: 'Student ID' }), h('span', { class: 'v', text: dash(p.student_id) })))),
+          h('p', { class: 'lead', text: 'Your personal information and rental summary.' })),
+        h('dl', { class: 'hero-stats' },
+          stat('Borrowing now', String(p.borrowing_now)),
+          stat('Total rentals', String(p.total_rentals)),
+          stat('Pending requests', String(p.pending_requests)),
+          stat(owes ? 'Unpaid penalties (THB)' : 'Unpaid penalties', owes ? money(p.unpaid_penalties) : 'None', owes)))),
 
-    // ----- rental summary -----
-    h('section', { class: 'sec-block' },
-      h('div', { class: 'sec-title' }, h('span', { class: 't font-display', text: 'Rental Summary' })),
-      h('div', { class: 'row-card' },
-        h('div', { class: 'info-grid', style: 'margin-bottom:0' },
-          infoBox('Borrowing now', String(p.borrowing_now)),
-          infoBox('Total rentals', String(p.total_rentals)),
-          infoBox('Pending requests', String(p.pending_requests)),
-          infoBox('Unpaid penalties', owes ? money(p.unpaid_penalties) : 'None', owes ? 'red' : '')))),
+    // ----- personal information -----
+    h('section', { class: 'section' },
+      h('div', { class: 'section-head' },
+        h('div', {},
+          h('h2', { class: 'h-display font-display', text: 'Personal Information' }),
+          h('p', { class: 'h-sub', text: 'The details linked to your student account' }))),
+      h('div', { class: 'profile-grid' },
+        tile('mail', 'Email', p.email, true),
+        tile('phone', 'Phone', dash(p.phone)),
+        tile('user', 'Student ID', dash(p.student_id)),
+        tile('building-2', 'Major', dash(p.major)),
+        tile('calendar', 'Year', p.year ? 'Year ' + p.year : '—'))),
 
     // ----- shortcuts -----
-    h('div', { style: 'text-align:center;display:flex;gap:10px;justify-content:center;flex-wrap:wrap' },
-      h('a', { class: 'btn btn-dark', href: '/student/my_rental', text: 'View my rentals' }),
-      h('a', { class: 'btn btn-outline', href: '/student/rental_catalog', text: 'Browse equipment' })));
+    h('section', { class: 'section' },
+      h('div', { class: 'profile-actions' },
+        h('a', { class: 'btn btn-dark', href: '/student/my_rental', text: 'View my rentals' }),
+        h('a', { class: 'btn btn-outline', href: '/student/rental_catalog', text: 'Browse equipment' }))));
 }
 
 loadProfile();

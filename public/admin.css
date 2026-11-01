@@ -1,22 +1,4 @@
 /* ---------- Admin dashboard ---------- */
-.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 36px; }
-.stat-card { position: relative; background: var(--surface); border: 1px solid var(--ink); border-radius: 6px;
-  padding: 16px 18px 18px; overflow: hidden; transition: transform .15s, box-shadow .15s; }
-.stat-card:hover { transform: translate(-3px,-3px); box-shadow: 5px 5px 0 var(--primary); }
-.stat-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--primary); }
-.stat-card.green::before { background: var(--green); }
-.stat-card.amber::before { background: #F59E0B; }
-.stat-card.ink::before { background: var(--ink); }
-.stat-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding-left: 6px; }
-.stat-label { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted); }
-.stat-ic { width: 32px; height: 32px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;
-  background: var(--violet-100); color: var(--primary); }
-.stat-card.green .stat-ic { background: var(--green-bg); color: var(--green-ink); }
-.stat-card.amber .stat-ic { background: var(--amber-bg); color: var(--amber-ink); }
-.stat-card.ink .stat-ic { background: var(--surface-2); color: var(--ink); }
-.stat-num { padding-left: 6px; font-family: 'Big Shoulders Display', sans-serif; font-size: clamp(44px, 5vw, 60px);
-  font-weight: 700; line-height: 1; color: var(--ink); font-variant-numeric: tabular-nums; }
-
 .admin-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 14px; margin-bottom: 16px;
   background: var(--surface); border: 1px solid var(--border); border-radius: 6px; }
 .admin-toolbar .search-box { flex: 1 1 260px; }
@@ -25,19 +7,17 @@
 .chip.active .chip-n { background: var(--primary); color: #fff; }
 
 .user-cell { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.avatar { width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
-  background: var(--violet-100); color: var(--primary); font-size: 12px; font-weight: 700; letter-spacing: .02em; border: 1px solid var(--violet-300); }
-.avatar.staff { background: var(--green-bg); color: var(--green-ink); border-color: #A7F3D0; }
-.avatar.admin { background: var(--ink); color: #fff; border-color: var(--ink); }
+.avatar { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--violet-100); color: var(--primary); border: 2px solid var(--primary);
+  font-family: 'Big Shoulders Display', sans-serif; font-size: 16px; font-weight: 800; letter-spacing: .02em; }
 .user-name { font-weight: 600; color: var(--ink); }
-.pill.ink { background: var(--ink); color: #fff; }
 .cell-muted { color: var(--text-secondary); }
 .table-wrap td.id-cell { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--text-muted); }
 .table-wrap td.id-cell.has-id { color: var(--text-secondary); }
 
 @media (max-width: 767px) {
-  .stat-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
   .admin-toolbar .count { margin-left: 0; width: 100%; }
+  .table-wrap td.x-cell.row-x { width: auto; }   /* the desktop 1% width would squash the pinned delete button */
 }
 /* ---------- Admin: forms, dialogs, equipment table ---------- */
 .admin-toolbar .add-btn { margin-left: auto; white-space: nowrap; }
@@ -54,21 +34,25 @@ dialog [hidden] { display: none !important; }
 .btn-danger { border: 1px solid var(--red-line); }
 @media (max-width: 520px) { dialog .form-grid { grid-template-columns: 1fr; } }
 
-.campus-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 4px;
-  background: var(--surface-2); color: var(--ink); border: 1px solid var(--border); }
-.campus-tag.rangsit { background: var(--violet-100); color: var(--primary); border-color: var(--violet-300); }
-.campus-tag.bangkadi { background: var(--green-bg); color: var(--green-ink); border-color: #A7F3D0; }
+/* role: plain text with a dot, like the Role / Student pair on the profile page */
+.user-role { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ink); }
+.user-role::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ink); }
+.user-role.student::before { background: var(--primary); }
+.user-role.staff::before { background: var(--green); }
+/* campus: same solid tag as on the student catalog cards (Rangsit violet, Bangkadi black) */
+.campus-tag { display: inline-block; min-width: 76px; text-align: center; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; background: var(--ink); color: #fff; }
+.campus-tag.rangsit { background: var(--primary); }
 
-.status-select { font: inherit; font-size: 12px; font-weight: 700; padding: 5px 8px; border-radius: 4px; cursor: pointer;
-  border: 1px solid var(--border); background: var(--surface); color: var(--ink); }
-.status-select.active { background: var(--green-bg); color: var(--green-ink); border-color: #A7F3D0; }
-.status-select.maintenance { background: var(--amber-bg); color: var(--amber-ink); border-color: var(--amber-line); }
-.status-select.retired { background: var(--surface-2); color: var(--text-muted); }
+/* equipment status: white select with ink border and a coloured dot */
+.status-select { font: inherit; font-size: 12px; font-weight: 700; padding: 6px 8px 6px 26px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--ink); background-color: var(--surface); color: var(--ink);
+  background-repeat: no-repeat; background-position: 10px 50%; background-size: 8px 8px; }
+.status-select.active { background-image: radial-gradient(circle closest-side, #10B981 96%, transparent 100%); }
+.status-select.maintenance { background-image: radial-gradient(circle closest-side, #F59E0B 96%, transparent 100%); }
+.status-select.retired { background-image: radial-gradient(circle closest-side, #94A3B8 96%, transparent 100%); color: var(--text-muted); }
 .status-select:disabled { opacity: .55; cursor: default; }
 
-.icon-btn { width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px;
-  border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); cursor: pointer; }
-.icon-btn.danger:hover { background: var(--red-bg); color: var(--red-ink); border-color: var(--red-line); }
 .table-wrap td.x-cell { width: 1%; text-align: right; }
 .table-wrap tr.row-removed { opacity: .55; }
 .table-wrap tr.row-removed .user-name { text-decoration: line-through; }
@@ -77,10 +61,8 @@ dialog [hidden] { display: none !important; }
 .admin-toolbar .chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
 .admin-toolbar .chip.active .chip-n { background: rgba(255,255,255,.22); color: #fff; }
 
-/* stat cards: small caption under the number */
-.stat-sub { padding-left: 6px; margin-top: 8px; font-size: 12px; font-weight: 500; color: var(--text-muted); }
-.stat-card.ink .stat-num { color: var(--ink); }
-
-/* stat cards: bigger, darker labels and captions */
-.stat-label { font-size: 13px; font-weight: 800; letter-spacing: .08em; color: var(--ink); }
-.stat-sub { font-size: 14px; font-weight: 600; color: var(--text-secondary); }
+/* Admin summary numbers: same look as the profile page hero (big white numbers on the dark header, rule on top) */
+.page-header .hero-stats.admin-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: 28px; margin: 36px 0 0; }
+.admin-stats dd { font-size: clamp(36px, 4.5vw, 56px); }
+.admin-stats .hs-sub { display: block; margin-top: 4px; font-size: 13px; color: rgba(255,255,255,.6); }
+@media (max-width: 700px) { .page-header .hero-stats.admin-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

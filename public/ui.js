@@ -56,8 +56,12 @@
 
   const assetTag = id => 'EQ-' + String(id).padStart(4, '0');
 
+  // outlined chip with a coloured round icon: available = check, borrowed = clock, overdue = x
+  const BADGE_ICON = { available: 'check', borrowed: 'clock', overdue: 'x' };
   function badge(kind, label) {            // kind: available | borrowed | overdue
-    return h('span', { class: 'badge ' + (kind === 'available' ? '' : kind), text: label });
+    return h('span', { class: 'badge ' + (kind === 'available' ? '' : kind) },
+      h('span', { class: 'st-ico' }, icon(BADGE_ICON[kind] || 'check', 9)),
+      label);
   }
 
   // ----- toast (replaces alert) -----
@@ -112,7 +116,7 @@
       const cells = [...tr.children];
       cells.forEach((td, i) => {
         if (heads[i]) td.setAttribute('data-label', heads[i]);
-        else if (i >= heads.length) td.classList.add('row-x');   // extra cell past the headers = delete (X) button
+        else if (i >= heads.length || i === cells.length - 1) td.classList.add('row-x');   // extra cell, or last cell under a blank header = delete button
       });
     });
   }
