@@ -23,7 +23,6 @@ GRANT UPDATE (password_hash, phone) ON equipment_borrow.`user` TO 'equip_app'@'l
 GRANT EXECUTE ON PROCEDURE equipment_borrow.sp_create_student TO 'equip_app'@'localhost';
 GRANT EXECUTE ON PROCEDURE equipment_borrow.sp_create_staff   TO 'equip_app'@'localhost';
 GRANT EXECUTE ON PROCEDURE equipment_borrow.sp_create_admin   TO 'equip_app'@'localhost';
-GRANT EXECUTE ON PROCEDURE equipment_borrow.sp_delete_user    TO 'equip_app'@'localhost';
 -- Check what the account can do:
 -- SHOW GRANTS FOR 'equip_app'@'localhost';
 

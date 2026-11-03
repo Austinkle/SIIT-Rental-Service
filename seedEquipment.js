@@ -47,7 +47,7 @@ const equipment = [
         'SELECT 1 FROM equipment WHERE name = ? AND deleted_at IS NULL', [name]);
       if (existing.length > 0) continue;
 
-      await db.query('CALL sp_add_equipment(?,?,?,?,?,?)',
+      await db.query('CALL sp_add_equipment(?,?,?,?,?,?,?)',
         [staffId, name, categoryId[category], description, qty, note]);
       added++;
     }

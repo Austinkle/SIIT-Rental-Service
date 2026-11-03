@@ -7,6 +7,7 @@ const db = require('./db');
 const wrap = require('./middleware/wrap');
 const auth = require('./controllers/authController');
 const sessions = require('./middleware/singleSession');
+const morgan = require('morgan');
 
 const app = express();
 
@@ -25,6 +26,8 @@ app.use(session({
   }
 }));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(morgan('dev'));
+app.use(require('./middleware/logErrors'));
 
 // ---------- Rate limits (per IP, per 15 minutes) ----------
 const signupLimiter = rateLimit({
@@ -91,7 +94,16 @@ app.use('/admin',   require('./routes/adminRoutes'));
 
 // ---------- Error handler (must be last) ----------
 app.use((err, req, res, next) => {
-  console.error(err);
+  const who = req.session && req.session.user
+    ? req.session.user.role + ' #' + req.session.user.id : 'guest';
+
+  console.error('\n[ERROR] ' + new Date().toISOString() + '  ' + req.method + ' ' + req.originalUrl + '  (' + who + ')');
+  console.error('  code     : ' + (err.code || '-'));
+  console.error('  errno    : ' + (err.errno || '-'));
+  console.error('  sqlState : ' + (err.sqlState || '-'));
+  console.error('  message  : ' + (err.sqlMessage || err.message));
+  console.error('  where    : ' + (((err.stack || '').split('\n')[1]) || '-').trim());
+
   res.status(500).send('Server error');
 });
 

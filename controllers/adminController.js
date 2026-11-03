@@ -1,6 +1,7 @@
 const path = require('path');
 const bcrypt = require('bcrypt');
 const db = require('../db');
+const logDb = require('../middleware/logDb');
 
 const LOCATIONS = ['Rangsit', 'Bangkadi'];
 const EQUIPMENT_STATUSES = ['active', 'maintenance', 'retired'];
@@ -78,6 +79,7 @@ exports.createUser = async (req, res) => {
     await db.query(procedure, params);
     res.status(201).json({ ok: true });
   } catch (err) {
+    logDb(err);   
     if (err.code === 'ER_DUP_ENTRY') {
       const detail = err.sqlMessage || '';
       if (detail.includes('student_student_id_unique'))

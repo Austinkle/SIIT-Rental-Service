@@ -1,5 +1,6 @@
 const path = require('path');
 const db = require('../db');
+const logDb = require('../middleware/logDb');
 
 const view = name => path.join(__dirname, '..', 'views', 'student', name + '.html');
 const MAX_ADVANCE_DAYS = 14;   // how far ahead a student may book
@@ -114,6 +115,7 @@ exports.createRequest = async (req, res) => {
       return res.status(404).json({ error: 'This equipment is not available' });
     res.json({ ok: true });
   } catch (err) {
+    logDb(err);
     // messages from your triggers, e.g. "Only students can submit borrow requests"
     if (err.sqlState === '45000') return res.status(400).json({ error: err.sqlMessage });
     throw err;
@@ -174,6 +176,7 @@ exports.returnTransaction = async (req, res) => {
       return res.status(404).json({ error: 'Rental not found or already returned' });
     res.json({ ok: true });
   } catch (err) {
+    logDb(err);
     if (err.sqlState === '45000') return res.status(400).json({ error: err.sqlMessage });
     throw err;
   }

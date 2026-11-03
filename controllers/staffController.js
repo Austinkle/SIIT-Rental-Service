@@ -1,5 +1,6 @@
 const path = require('path');
 const db = require('../db');
+const logDb = require('../middleware/logDb');
 const LOCATIONS = ['Rangsit', 'Bangkadi'];
 
 const view = name => path.join(__dirname, '..', 'views', 'staff', name + '.html');
@@ -38,6 +39,7 @@ exports.decideRequest = async (req, res) => {
     }
     res.json({ ok: true });
   } catch (err) {
+    logDb(err);  
     // messages written with SIGNAL in the triggers (e.g. "No equipment available")
     if (err.sqlState === '45000') return res.status(400).json({ error: err.sqlMessage });
     throw err;
@@ -59,7 +61,7 @@ exports.addEquipment = async (req, res) => {
     return res.status(400).json({ error: 'Invalid equipment data' });
   }
   try {
-    await db.query('CALL sp_add_equipment(?,?,?,?,?,?)',
+    await db.query('CALL sp_add_equipment(?,?,?,?,?,?,?)',
       [req.session.user.id, name.trim(), categoryId, description || null, qty, condition_note || null]);
     res.json({ ok: true });
   } catch (err) {
@@ -72,6 +74,7 @@ const returnDeskPageFile = view('return_desk');
 exports.returnDeskPage = (req, res) => res.sendFile(returnDeskPageFile);
 
 function sendDbError(err, res) {
+  logDb(err);
   if (err.sqlState === '45000') return res.status(400).json({ error: err.sqlMessage });
   throw err;
 }

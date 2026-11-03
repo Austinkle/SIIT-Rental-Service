@@ -98,6 +98,12 @@
       n.hidden = false;
     }
 
+    if (params.get('reason') === 'not-allow') {
+      const n = document.getElementById('notice');
+      n.textContent = 'Not allow to access';
+      n.hidden = false;
+    }
+
     const reason = params.get('reason');
     if (reason === 'in-use' || reason === 'other-device') {
       const d = document.getElementById('denied');

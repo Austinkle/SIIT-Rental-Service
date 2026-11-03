@@ -23,15 +23,6 @@ BEGIN
     END IF;
 END//
 
-DROP TRIGGER IF EXISTS trg_user_bu//
-
-CREATE TRIGGER trg_user_bu BEFORE UPDATE ON `user` FOR EACH ROW
-BEGIN
-    IF NEW.user_type <> OLD.user_type THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'user_type cannot be changed';
-    END IF;
-END//
-
 DROP TRIGGER IF EXISTS trg_student_bd//
 
 CREATE TRIGGER trg_student_bd BEFORE DELETE ON `student` FOR EACH ROW
@@ -50,31 +41,6 @@ BEGIN
     END IF;
 END//
 
-DROP TRIGGER IF EXISTS trg_admin_bd//
-
-CREATE TRIGGER trg_admin_bd BEFORE DELETE ON `admin` FOR EACH ROW
-BEGIN
-    IF @deleting_user_id IS NULL OR @deleting_user_id <> OLD.user_id THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Delete users with sp_delete_user';
-    END IF;
-END//
-
-
--- Who may do what is decided by the subclass the user belongs to (no RBAC tables):
---   student        -> may submit borrow requests and be the borrower (borrower_id)
---   staff          -> may approve (approved_by on a borrow transaction)
-DROP TRIGGER IF EXISTS trg_borrow_request_bi//
-
-CREATE TRIGGER trg_borrow_request_bi BEFORE INSERT ON `borrow_request` FOR EACH ROW
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM `student` WHERE user_id = NEW.user_id) THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Only students can submit borrow requests';
-    END IF;
-    IF EXISTS (SELECT 1 FROM `equipment`
-               WHERE equipment_id = NEW.equipment_id AND deleted_at IS NOT NULL) THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'This equipment has been deleted';
-    END IF;
-END//
 
 DROP TRIGGER IF EXISTS trg_borrow_transaction_bi//
 
@@ -250,38 +216,9 @@ BEGIN
     COMMIT;
 END//
 
--- Fails (and rolls back) if the user is still referenced by requests, transactions, penalties
--- or equipment (equipment.added_by / deleted_by)
-DROP PROCEDURE IF EXISTS sp_delete_user//
-
-CREATE PROCEDURE sp_delete_user(IN p_user_id INT)
-BEGIN
-    DECLARE EXIT HANDLER FOR SQLEXCEPTION
-    BEGIN
-        ROLLBACK;
-        SET @deleting_user_id = NULL;
-        RESIGNAL;
-    END;
-    START TRANSACTION;
-    SET @deleting_user_id = p_user_id;
-    DELETE FROM `student` WHERE user_id = p_user_id;
-    DELETE FROM `staff`   WHERE user_id = p_user_id;
-    DELETE FROM `admin`   WHERE user_id = p_user_id;
-    DELETE FROM `user`    WHERE user_id = p_user_id;
-    SET @deleting_user_id = NULL;
-    COMMIT;
-END//
-
 -- ---------- Equipment: staff "add" and "delete" ----------
 -- Equipment rows are never physically deleted (that would erase who deleted them).
 -- "delete" = soft delete: status 'retired' + deleted_by + deleted_at, via sp_delete_equipment.
-DROP TRIGGER IF EXISTS trg_equipment_bd//
-
-CREATE TRIGGER trg_equipment_bd BEFORE DELETE ON `equipment` FOR EACH ROW
-BEGIN
-    SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Equipment is never hard-deleted; use sp_delete_equipment';
-END//
 
 DROP TRIGGER IF EXISTS trg_equipment_bu//
 
@@ -399,6 +336,22 @@ BEGIN
              NEW.borrow_date, NEW.due_date,                      -- the dates the student chose
              (SELECT condition_note FROM `equipment` WHERE equipment_id = NEW.equipment_id),
              NEW.location);
+    END IF;
+END//
+
+-- Who may do what is decided by the subclass the user belongs to (no RBAC tables):
+--   student        -> may submit borrow requests and be the borrower (borrower_id)
+--   staff          -> may approve (approved_by on a borrow transaction)
+DROP TRIGGER IF EXISTS trg_borrow_request_bi//
+
+CREATE TRIGGER trg_borrow_request_bi BEFORE INSERT ON `borrow_request` FOR EACH ROW
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM `student` WHERE user_id = NEW.user_id) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Only students can submit borrow requests';
+    END IF;
+    IF EXISTS (SELECT 1 FROM `equipment`
+               WHERE equipment_id = NEW.equipment_id AND deleted_at IS NOT NULL) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'This equipment has been deleted';
     END IF;
 END//
 
